@@ -1,0 +1,74 @@
+{
+    "name": "@alis-build/harness-eval",
+    "version": "0.1.0",
+    "description": "Harness-level eval framework for measuring AI coding agent tool-selection behavior",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "author": "www.alisx.com",
+    "license": "Apache-2.0",
+    "engines": {
+        "node": ">=22.12.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/alis-build/harness-eval-ts.git"
+    },
+    "homepage": "https://github.com/alis-build/harness-eval-ts#readme",
+    "bugs": {
+        "url": "https://github.com/alis-build/harness-eval-ts/issues"
+    },
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./adapters/claude-code": {
+            "types": "./dist/adapters/claude-code/index.d.ts",
+            "import": "./dist/adapters/claude-code/index.js"
+        },
+        "./runner": {
+            "types": "./dist/runner/suite.d.ts",
+            "import": "./dist/runner/suite.js"
+        },
+        "./config": {
+            "types": "./dist/config/loader.d.ts",
+            "import": "./dist/config/loader.js"
+        }
+    },
+    "files": [
+        "dist",
+        "schemas",
+        "README.md",
+        "LICENSE"
+    ],
+    "scripts": {
+        "generate-schemas": "tsx src/schemas/generate.ts",
+        "build": "pnpm run generate-schemas && tsdown",
+        "prepack": "pnpm run build",
+        "prepublishOnly": "pnpm run build",
+        "watch": "tsdown --watch",
+        "clean": "rm -rf dist",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "typecheck": "tsc --noEmit"
+    },
+    "bin": {
+        "harness-eval": "./dist/cli/bin.js"
+    },
+    "dependencies": {
+        "yaml": "^2.6.0",
+        "zod": "^4.4.3"
+    },
+    "devDependencies": {
+        "@types/node": "^22.12.0",
+        "tsdown": "^0.22.3",
+        "tsx": "^4.22.4",
+        "typescript": "^5.6.0",
+        "vitest": "^2.1.0"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "packageManager": "pnpm@11.3.0"
+}
