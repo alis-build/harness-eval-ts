@@ -5,10 +5,16 @@
 import type { CellReport, SuiteReport } from "../runner/types";
 import type { RenderableRow, RenderableStat } from "./types";
 
+/** Map a suite report to formatter-ready rows (one per cell). */
 export function toRenderableRows(report: SuiteReport): RenderableRow[] {
   return report.cells.map((cell) => cellToRow(cell));
 }
 
+/**
+ * Attach baseline pass-rate deltas to matching rows.
+ *
+ * Rows without a matching baseline cell are returned unchanged.
+ */
 export function applyBaseline(
   rows: RenderableRow[],
   baseline: SuiteReport,
@@ -36,6 +42,7 @@ export function applyBaseline(
   });
 }
 
+/** Convert one {@link CellReport} to a {@link RenderableRow}. */
 function cellToRow(cell: CellReport): RenderableRow {
   const totalReps = cell.repetitions.length;
 

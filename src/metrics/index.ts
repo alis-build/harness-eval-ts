@@ -1,3 +1,10 @@
+/**
+ * Public exports for trajectory and tool-call eval metrics.
+ *
+ * Metrics align with Vertex AI EvaluationService trajectory definitions.
+ * Import from here for envelope enrichment, custom reporters, or tests.
+ */
+
 export {
   computeTrajectoryMetrics,
   trajectoryAnyOrderMatch,

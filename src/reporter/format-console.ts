@@ -10,6 +10,11 @@ const RED = "\x1b[31m";
 const YELLOW = "\x1b[33m";
 const DIM = "\x1b[2m";
 
+/**
+ * Render renderable rows as ANSI-colored console output.
+ *
+ * @param color When false, emit plain text without escape codes.
+ */
 export function formatConsole(rows: RenderableRow[], color = true): string {
   const lines: string[] = [];
 
@@ -51,6 +56,7 @@ export function formatConsole(rows: RenderableRow[], color = true): string {
   return lines.join("\n").trimEnd();
 }
 
+/** Format pass rate for display, noting when all reps crashed. */
 function formatRate(stat: RenderableRow["stats"][number]): string {
   if (stat.evaluatedCount === 0) {
     return `0/${stat.totalReps} (all reps crashed)`;

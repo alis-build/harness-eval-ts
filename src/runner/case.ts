@@ -1,5 +1,9 @@
 /**
- * Case-level runner.
+ * Case-level runner — config merge, single-repetition execution, and cell aggregation.
+ *
+ * The suite runner (`suite.ts`) fans out work; this module owns the per-rep
+ * lifecycle: merge config layers, invoke the adapter, evaluate assertions, and
+ * compute thresholded pass rates for one matrix cell.
  */
 
 import type { AdapterDiagnostics, AdapterResult, BaseAdapterConfig } from "../adapters/types";
@@ -22,6 +26,7 @@ export const DEFAULT_REPETITIONS = 5;
 /** Default assertion pass-rate threshold when `threshold` is omitted. */
 export const DEFAULT_THRESHOLD = 1.0;
 
+/** Injectable adapter run function (used by tests to stub harness I/O). */
 export type AdapterRunFn = (
   config: BaseAdapterConfig & Record<string, unknown>,
 ) => Promise<AdapterResult>;
@@ -45,10 +50,17 @@ export function mergeConfig(
   return resolveRunConfig(adapterId, layers, testCase.prompt);
 }
 
+/** Effective repetition count for a case (`case.repetitions` or default). */
 export function getRepetitions(testCase: TestCase): number {
   return testCase.repetitions ?? DEFAULT_REPETITIONS;
 }
 
+/**
+ * Run one repetition: invoke the adapter, evaluate assertions, capture errors.
+ *
+ * Adapter failures are returned as {@link RepetitionResult.error} rather than
+ * thrown so the suite runner can continue other reps and report adapter error counts.
+ */
 export async function runRepetition(
   testCase: TestCase,
   _cell: MatrixCell,
@@ -88,6 +100,12 @@ export async function runRepetition(
   }
 }
 
+/**
+ * Normalize thrown values into a {@link RepetitionError}.
+ *
+ * Preserves {@link AdapterDiagnostics} when the thrown value is an
+ * {@link AdapterError} or carries a `diagnostics` property.
+ */
 function extractError(err: unknown): RepetitionError {
   const message = err instanceof Error ? err.message : String(err);
 
@@ -102,6 +120,12 @@ function extractError(err: unknown): RepetitionError {
   return { message, diagnostics };
 }
 
+/**
+ * Roll up repetition results into a {@link CellReport}.
+ *
+ * Adapter errors reduce `evaluatedCount` but do not fail the cell by
+ * themselves — only assertion threshold misses mark a cell as failed.
+ */
 export function aggregateCell(
   testCase: TestCase,
   cell: MatrixCell,

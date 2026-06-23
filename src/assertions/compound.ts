@@ -19,6 +19,7 @@ export type Evaluator = (
   assertion: Assertion,
 ) => AssertionResult;
 
+/** Evaluate `all_of`: every child assertion must pass. */
 export function evaluateAllOf(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "all_of" }>,
@@ -38,6 +39,7 @@ export function evaluateAllOf(
   };
 }
 
+/** Evaluate `any_of`: at least one child assertion must pass. */
 export function evaluateAnyOf(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "any_of" }>,
@@ -55,6 +57,7 @@ export function evaluateAnyOf(
   };
 }
 
+/** Evaluate `not`: invert the inner assertion result. */
 export function evaluateNot(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "not" }>,

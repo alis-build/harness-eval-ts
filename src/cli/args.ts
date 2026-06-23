@@ -1,13 +1,19 @@
 /**
  * Minimal argv parser — no external deps.
+ *
+ * Parses `command`, positional args, and `--long` / `-s` flags. Boolean
+ * flags omit a value; the next token starting with `-` is not consumed as
+ * a value. Use `--` to pass through remaining tokens as positional.
  */
 
+/** Parsed CLI argv: optional subcommand, positional args, and flag map. */
 export interface ParsedArgs {
   command?: string;
   positional: string[];
   options: Record<string, string | boolean>;
 }
 
+/** Parse process argv into command, positional args, and options. */
 export function parseArgs(argv: string[]): ParsedArgs {
   const positional: string[] = [];
   const options: Record<string, string | boolean> = {};
@@ -50,6 +56,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   return { command, positional, options };
 }
 
+/** Return a string option value, or undefined when absent or boolean. */
 export function getOption(
   options: Record<string, string | boolean>,
   name: string,
@@ -58,6 +65,7 @@ export function getOption(
   return typeof v === "string" ? v : undefined;
 }
 
+/** Parse an integer option with fallback when absent or non-numeric. */
 export function getOptionInt(
   options: Record<string, string | boolean>,
   name: string,
@@ -70,6 +78,7 @@ export function getOptionInt(
   return n;
 }
 
+/** True when a boolean flag is set or explicitly `"true"`. */
 export function hasOption(
   options: Record<string, string | boolean>,
   name: string,

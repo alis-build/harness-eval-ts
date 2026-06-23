@@ -1,3 +1,10 @@
+/**
+ * Outcome grading public API — LLM-as-judge over suite report JSON.
+ *
+ * Re-exports grading orchestration, Claude subprocess grader, transcript
+ * formatting, and console output helpers for CLI and programmatic use.
+ */
+
 export { gradeReport, loadSuiteReport } from "./grade-report";
 export { resolveGradeOptions, type GradeCliOverrides } from "./resolve-grade-options";
 export { trajectoryToTranscript } from "./transcript";

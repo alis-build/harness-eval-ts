@@ -1,8 +1,5 @@
 /**
  * Generate JSON Schema files from Zod definitions (build step).
- *
- * Uses Zod 4 native JSON Schema conversion:
- * https://zod.dev/json-schema
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
@@ -13,9 +10,8 @@ import { z } from "zod";
 
 import { evalRunEnvelopeSchema } from "./eval-run-envelope";
 import {
-  agentTraceSchema,
   evalDatasetRowSchema,
-  protoTrajectoryInstanceSchema,
+  instancesJsonlRowSchema,
 } from "./eval-interchange";
 import {
   EVAL_INTERCHANGE_SCHEMA_ID,
@@ -30,12 +26,14 @@ const schemasDir = join(__dirname, "../../schemas");
 const JSON_SCHEMA_DRAFT =
   "https://json-schema.org/draft/2020-12/schema" as const;
 
+/** Metadata for one generated JSON Schema file. */
 interface SchemaFileMeta {
   $id: string;
   title: string;
   description: string;
 }
 
+/** Convert a Zod schema to JSON Schema draft 2020-12 with document metadata. */
 function toJsonSchema(
   schema: z.ZodType,
   meta: SchemaFileMeta,
@@ -54,6 +52,8 @@ function toJsonSchema(
   };
 }
 
+/** Write one `.schema.json` file under the repo `schemas/` directory. */
+/** Write one schema file under `schemas/` at repo root. */
 async function writeSchema(
   filename: string,
   schema: z.ZodType,
@@ -90,27 +90,17 @@ async function main(): Promise<void> {
     $id: EVAL_INTERCHANGE_SCHEMA_ID,
     title: "EvalInterchange",
     description:
-      "Primary eval interchange row format for trajectory evaluation datasets.",
+      "Trajectory projection row with Vertex EvaluationInstance wire fields.",
   });
 
   await writeSchema(
-    "eval-interchange-agent-trace.schema.json",
-    agentTraceSchema,
+    "eval-interchange-instances.schema.json",
+    instancesJsonlRowSchema,
     {
-      $id: `${EVAL_INTERCHANGE_SCHEMA_ID}#AgentTrace`,
-      title: "AgentTrace",
-      description: "Multi-turn agent execution trace in interchange format.",
-    },
-  );
-
-  await writeSchema(
-    "eval-interchange-proto-instance.schema.json",
-    protoTrajectoryInstanceSchema,
-    {
-      $id: `${EVAL_INTERCHANGE_SCHEMA_ID}#ProtoTrajectoryInstance`,
-      title: "ProtoTrajectoryInstance",
+      $id: `${EVAL_INTERCHANGE_SCHEMA_ID}#InstancesJsonlRow`,
+      title: "InstancesJsonlRow",
       description:
-        "Proto-compatible evaluation instance with JSON-string tool_input.",
+        "Type-tagged JSONL row for Vertex Trajectory*Instance batch export.",
     },
   );
 }

@@ -1,5 +1,16 @@
 /**
  * Build {@link EvalRunEnvelope} from harness-eval run and grading reports.
+ *
+ * This is the canonical export path from in-process or on-disk {@link SuiteReport}
+ * JSON into the cross-harness eval record contract. It stitches together:
+ *
+ *   - Behavioral assertion results from the runner
+ *   - Optional outcome grades from the LLM grader
+ *   - Vertex protojson interchange fields via {@link enrichRepetitionWithProtojson}
+ *   - Optional artifacts (transcript, raw stream-json) controlled by build options
+ *
+ * Downstream consumers include CI gates, databases, and the `harness-eval envelope`
+ * CLI projection commands.
  */
 
 import { randomUUID } from "node:crypto";
@@ -7,7 +18,8 @@ import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
 import { trajectoryToTranscript } from "../grader/transcript";
-import { enrichRepetitionWithInterchange } from "../eval-interchange/projections";
+import { toReferenceTrajectory } from "../eval-interchange/protojson/trajectory-instances";
+import { enrichRepetitionWithProtojson } from "../eval-interchange/enrich";
 import type { SuiteGradingReport } from "../grader/types";
 import type {
   BuildEvalRunEnvelopeOptions,
@@ -21,6 +33,12 @@ import {
 } from "../types/eval-record";
 import type { SuiteReport } from "../runner/types";
 
+/**
+ * Pull raw stream-json events from an adapter result when the adapter exposes them.
+ *
+ * Adapters may attach `rawEvents` for debug-only envelope export; this helper
+ * avoids coupling the builder to a specific adapter result type.
+ */
 function extractRawEvents(adapterResult: unknown): unknown[] | undefined {
   if (
     adapterResult !== null &&
@@ -33,9 +51,18 @@ function extractRawEvents(adapterResult: unknown): unknown[] | undefined {
   return undefined;
 }
 
+/**
+ * Derive cell-level outcome pass from graded repetitions.
+ *
+ * Returns `undefined` when no repetition was graded (outcome gate not applicable).
+ * When graded, every repetition must have zero failed expectations and no grader error.
+ *
+ * @param _caseId - Reserved for future per-case outcome rules; unused today.
+ * @param _cellLabel - Reserved for future per-cell outcome rules; unused today.
+ */
 function outcomePassForCell(
-  caseId: string,
-  cellLabel: string,
+  _caseId: string,
+  _cellLabel: string,
   repetitions: EvalRepetition[],
 ): boolean | undefined {
   const graded = repetitions.filter((r) => r.outcomeGrades);
@@ -50,12 +77,18 @@ function outcomePassForCell(
 /**
  * Convert a {@link SuiteReport} (and optional grading) into a versioned
  * {@link EvalRunEnvelope} for storage or API handoff.
+ *
+ * @param report - Runner output for one suite execution.
+ * @param options - Provenance, grading merge, and artifact inclusion flags.
+ * @returns A fully populated envelope with protojson interchange fields on each repetition.
  */
 export function buildEvalRunEnvelope(
   report: SuiteReport,
   options: BuildEvalRunEnvelopeOptions = {},
 ): EvalRunEnvelope {
+  // Transcript is on by default — judges and external tools expect it.
   const includeTranscript = options.includeTranscript !== false;
+  // Raw stream-json is opt-in: large, vendor-specific, not cross-harness.
   const includeRaw = options.includeRawStreamEvents === true;
 
   const judge =
@@ -63,7 +96,15 @@ export function buildEvalRunEnvelope(
 
   const cells: EvalCellResult[] = report.cells.map((cell) => {
     const prompt = cell.prompt ?? "";
-    const referenceTrajectory = cell.reference_trajectory;
+    const referenceTrajectoryConfig = cell.reference_trajectory;
+    // Cell-level reference is exported in Vertex wire format for DB storage and
+    // interchange even when individual repetitions also carry trajectoryInstances.
+    const referenceTrajectory = referenceTrajectoryConfig
+      ? toReferenceTrajectory(
+          referenceTrajectoryConfig.steps,
+          referenceTrajectoryConfig.tool_name_mode ?? "harness",
+        )
+      : undefined;
     const repetitions: EvalRepetition[] = cell.repetitions.map((rep) => {
       const base: EvalRepetition = {
         repetitionIndex: rep.repetitionIndex,
@@ -102,6 +143,7 @@ export function buildEvalRunEnvelope(
         }
       }
 
+      // Match grading rows by the same composite key the grader uses: case × cell × rep.
       const graded = options.grading?.results.find(
         (r) =>
           r.caseId === cell.caseId &&
@@ -119,7 +161,12 @@ export function buildEvalRunEnvelope(
         };
       }
 
-      return enrichRepetitionWithInterchange(base, referenceTrajectory);
+      // Protojson fields (evaluationInstance, trajectoryInstances, harnessMetrics)
+      // are derived from trajectory + suite reference config, not from the runner report.
+      return enrichRepetitionWithProtojson(base, {
+        prompt,
+        reference: referenceTrajectoryConfig,
+      });
     });
 
     return {
@@ -128,8 +175,8 @@ export function buildEvalRunEnvelope(
       notes: cell.notes,
       prompt: cell.prompt,
       expectations: cell.expectations,
-      reference_trajectory: cell.reference_trajectory,
-      human_ratings: cell.human_ratings,
+      referenceTrajectory,
+      humanRatings: cell.human_ratings,
       cellLabel: cell.cell.label,
       axes: cell.cell.axes,
       assertionStats: cell.assertionStats,
@@ -146,6 +193,7 @@ export function buildEvalRunEnvelope(
 
   const cellsPassed = cells.filter((c) => c.behavioralPass).length;
   const gradedCells = cells.filter((c) => c.outcomePass !== undefined);
+  // Run-level outcomePass is omitted when grading was not run for any cell.
   const outcomePass =
     gradedCells.length > 0
       ? gradedCells.every((c) => c.outcomePass === true)
@@ -173,7 +221,16 @@ export function buildEvalRunEnvelope(
   };
 }
 
-/** Build envelope from on-disk report + optional grading JSON paths. */
+/**
+ * Build an envelope from on-disk runner and grader JSON artifacts.
+ *
+ * Reads `reportPath` as a {@link SuiteReport}. When `gradingPath` is set, merges
+ * outcome grades from a {@link SuiteGradingReport}. When `suitePath` is set,
+ * attaches suite URI and SHA-256 content hash for reproducibility.
+ *
+ * @param reportPath - Path to the suite run report JSON from `harness-eval run`.
+ * @param options - Same build options as {@link buildEvalRunEnvelope}, plus file paths.
+ */
 export async function buildEvalRunEnvelopeFromFiles(
   reportPath: string,
   options: BuildEvalRunEnvelopeOptions & {

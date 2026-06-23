@@ -1,200 +1,163 @@
 /**
- * Zod schemas for eval interchange output types.
- *
- * Primary output vocabulary for trajectory evaluation, proto-compatible
- * instances, and multi-turn agent traces. Inspired by upstream evaluation
- * service wire formats (see evaluation_service.proto v1beta1).
+ * Zod schemas for Vertex protojson eval interchange types.
  */
 
 import { z } from "zod";
 
 import { described, field } from "./meta";
 
-/** Wire-format tool call: `tool_input` is a JSON-serialized string. */
-export const interchangeToolCallSchema = described(
+export const protojsonToolCallSchema = described(
   z.object({
-    tool_name: field(z.string(), "Tool name as emitted by the agent."),
-    tool_input: field(
+    toolName: field(z.string(), "Tool name as emitted by the agent."),
+    toolInput: field(
       z.string(),
-      "JSON-serialized tool arguments (wire format).",
+      "JSON-serialized tool arguments (Vertex wire format).",
     ),
   }),
   {
-    id: "InterchangeToolCall",
-    title: "InterchangeToolCall",
-    description: "Tool call in interchange wire format.",
+    id: "ProtojsonToolCall",
+    title: "ProtojsonToolCall",
+    description: "Tool call in Vertex EvaluationService wire format.",
   },
 );
 
-export const interchangeTrajectorySchema = described(
+export const protojsonTrajectorySchema = described(
   z.object({
-    tool_calls: field(
-      z.array(interchangeToolCallSchema),
+    toolCalls: field(
+      z.array(protojsonToolCallSchema),
       "Ordered tool calls in the trajectory.",
     ),
   }),
   {
-    id: "InterchangeTrajectory",
-    title: "InterchangeTrajectory",
-    description: "Ordered sequence of tool calls.",
+    id: "ProtojsonTrajectory",
+    title: "ProtojsonTrajectory",
+    description: "Vertex Trajectory message wire format.",
   },
 );
 
-/** Tabular tool call: `tool_input` as parsed object for dataset rows. */
-export const tabularToolCallSchema = described(
+export const instanceDataSchema = described(
   z.object({
-    tool_name: field(z.string(), "Tool name as emitted by the agent."),
-    tool_input: field(
-      z.unknown(),
-      "Tool arguments as a structured object for tabular consumption.",
-    ),
+    text: field(z.string().optional(), "Plain text instance data."),
   }),
   {
-    id: "TabularToolCall",
-    title: "TabularToolCall",
-    description: "Tool call with structured tool_input for JSONL/tabular export.",
+    id: "InstanceData",
+    title: "InstanceData",
+    description: "EvaluationInstance prompt/response/reference text wrapper.",
   },
 );
 
-export const contentPartSchema = described(
+export const evaluationInstanceJsonSchema = described(
   z.object({
-    text: field(z.string().optional(), "Plain text content."),
-    function_call: field(
-      z
-        .object({
-          name: field(z.string(), "Function or tool name."),
-          args: field(z.unknown(), "Function arguments."),
-        })
-        .optional(),
-      "Function call emitted by the agent.",
-    ),
-    function_response: field(
-      z
-        .object({
-          name: field(z.string(), "Function or tool name."),
-          response: field(z.unknown(), "Function result payload."),
-        })
-        .optional(),
-      "Function response from tool execution.",
-    ),
+    prompt: field(instanceDataSchema.optional(), "Eval prompt."),
+    response: field(instanceDataSchema.optional(), "Final agent response."),
+    reference: field(instanceDataSchema.optional(), "Reference answer text."),
   }),
   {
-    id: "ContentPart",
-    title: "ContentPart",
-    description: "One part of agent event content (text, function_call, or function_response).",
+    id: "EvaluationInstanceJson",
+    title: "EvaluationInstanceJson",
+    description:
+      "Vertex EvaluationInstance wire format (agentEvalData omitted in v1).",
   },
 );
 
-export const agentEventSchema = described(
+export const trajectoryPairInstanceSchema = described(
   z.object({
-    author: field(
-      z.string(),
-      "Agent id or user identifier for this event.",
+    predictedTrajectory: field(
+      protojsonTrajectorySchema,
+      "Predicted tool-call trajectory.",
     ),
-    content: field(
-      z.object({
-        parts: field(z.array(contentPartSchema), "Content parts for this event."),
-      }),
-      "Structured event content.",
-    ),
-    event_time: field(
-      z.string().optional(),
-      "ISO 8601 timestamp when the event occurred.",
-    ),
-    state_delta: field(
-      z.record(z.string(), z.unknown()).optional(),
-      "Session state changes associated with this event.",
-    ),
-    active_tools: field(
-      z.array(z.object({ name: field(z.string(), "Tool name.") })).optional(),
-      "Tools available to the agent at event time.",
+    referenceTrajectory: field(
+      protojsonTrajectorySchema,
+      "Reference tool-call trajectory.",
     ),
   }),
   {
-    id: "AgentEvent",
-    title: "AgentEvent",
-    description: "One event in a multi-turn agent trace.",
+    id: "TrajectoryPairInstanceJson",
+    title: "TrajectoryPairInstanceJson",
+    description: "Shared shape for Trajectory*Match/Precision/Recall instances.",
   },
 );
 
-export const conversationTurnSchema = described(
+export const trajectorySingleToolUseInstanceSchema = described(
   z.object({
-    turn_index: field(z.number().int(), "Zero-based turn index."),
-    turn_id: field(z.string().optional(), "Optional stable turn identifier."),
-    events: field(z.array(agentEventSchema), "Events in chronological order."),
+    predictedTrajectory: field(
+      protojsonTrajectorySchema,
+      "Predicted tool-call trajectory.",
+    ),
   }),
   {
-    id: "ConversationTurn",
-    title: "ConversationTurn",
-    description: "One turn in a multi-turn agent conversation.",
+    id: "TrajectorySingleToolUseInstanceJson",
+    title: "TrajectorySingleToolUseInstanceJson",
+    description: "Vertex TrajectorySingleToolUseInstance wire format.",
   },
 );
 
-export const agentConfigSchema = described(
+export const trajectoryInstancesJsonSchema = described(
   z.object({
-    agent_id: field(z.string(), "Stable agent identifier."),
-    agent_type: field(z.string().optional(), "Agent type or role."),
-    description: field(z.string().optional(), "Human-readable agent description."),
-    instruction: field(z.string().optional(), "System instruction for the agent."),
-    tools: field(
-      z.array(z.object({ name: field(z.string(), "Tool name.") })).optional(),
-      "Tools available to this agent.",
+    exactMatch: field(trajectoryPairInstanceSchema.optional(), "Exact match instance."),
+    inOrderMatch: field(
+      trajectoryPairInstanceSchema.optional(),
+      "In-order match instance.",
     ),
-    sub_agents: field(
-      z.array(z.string()).optional(),
-      "Sub-agent identifiers when using multi-agent setups.",
+    anyOrderMatch: field(
+      trajectoryPairInstanceSchema.optional(),
+      "Any-order match instance.",
+    ),
+    precision: field(trajectoryPairInstanceSchema.optional(), "Precision instance."),
+    recall: field(trajectoryPairInstanceSchema.optional(), "Recall instance."),
+    singleToolUse: field(
+      trajectorySingleToolUseInstanceSchema.optional(),
+      "Single tool use instance.",
     ),
   }),
   {
-    id: "AgentConfig",
-    title: "AgentConfig",
-    description: "Static configuration for one agent in a trace.",
+    id: "TrajectoryInstancesJson",
+    title: "TrajectoryInstancesJson",
+    description: "Vertex Trajectory*Instance messages keyed by metric.",
   },
 );
 
-export const agentTraceSchema = described(
+export const harnessMetricsSchema = described(
   z.object({
-    agents: field(
-      z.record(z.string(), agentConfigSchema),
-      "Agent configurations keyed by agent id.",
+    trajectoryExactMatch: field(z.number(), "Exact trajectory match score (0 or 1)."),
+    trajectoryInOrderMatch: field(
+      z.number(),
+      "In-order trajectory match score (0 or 1).",
     ),
-    turns: field(
-      z.array(conversationTurnSchema),
-      "Chronological conversation turns.",
+    trajectoryAnyOrderMatch: field(
+      z.number(),
+      "Any-order trajectory match score (0 or 1).",
+    ),
+    trajectoryPrecision: field(z.number(), "Trajectory precision (0..1)."),
+    trajectoryRecall: field(z.number(), "Trajectory recall (0..1)."),
+    trajectorySingleToolUse: field(
+      z.number(),
+      "Single-tool-use match score (0 or 1).",
     ),
   }),
   {
-    id: "AgentTrace",
-    title: "AgentTrace",
-    description: "Full multi-turn agent execution trace.",
+    id: "HarnessMetrics",
+    title: "HarnessMetrics",
+    description: "Harness-precomputed trajectory metric scores.",
   },
 );
 
 export const evalDatasetRowSchema = described(
   z.object({
+    caseId: field(z.string(), "Test case id."),
+    repetitionIndex: field(z.number().int(), "Repetition index."),
     prompt: field(z.string().optional(), "Eval prompt sent to the agent."),
     response: field(z.string().optional(), "Final agent response text."),
-    reference: field(
-      z.string().optional(),
-      "Reference answer text when provided.",
+    evaluationInstance: field(
+      evaluationInstanceJsonSchema.optional(),
+      "Vertex EvaluationInstance wire object.",
     ),
-    predicted_trajectory: field(
-      z.array(tabularToolCallSchema),
-      "Predicted tool-call trajectory with structured tool_input.",
-    ),
-    reference_trajectory: field(
-      z.array(tabularToolCallSchema).optional(),
-      "Reference tool-call trajectory when provided.",
-    ),
-    latency_in_seconds: field(
-      z.number(),
-      "Session latency in seconds.",
-    ),
+    latencySeconds: field(z.number(), "Session latency in seconds."),
     failure: field(
       z.union([z.literal(0), z.literal(1)]),
       "1 when the harness run failed, 0 on success.",
     ),
-    human_ratings: field(
+    humanRatings: field(
       z.record(z.string(), z.number()).optional(),
       "Human ratings keyed by metric name for judge calibration.",
     ),
@@ -202,39 +165,35 @@ export const evalDatasetRowSchema = described(
   {
     id: "EvalDatasetRow",
     title: "EvalDatasetRow",
-    description: "Flattened row for tabular or JSONL dataset consumption.",
+    description: "Flattened row for trajectory projection JSONL.",
   },
 );
 
-export const protoTrajectoryInstanceSchema = described(
+export const instancesJsonlRowSchema = described(
   z.object({
-    predicted_trajectory: field(
-      interchangeTrajectorySchema,
-      "Predicted trajectory in wire format.",
+    messageType: field(z.string(), "Vertex protobuf message type name."),
+    caseId: field(z.string(), "Test case id."),
+    repetitionIndex: field(z.number().int(), "Repetition index."),
+    instance: field(
+      z.union([
+        trajectoryPairInstanceSchema,
+        trajectorySingleToolUseInstanceSchema,
+        evaluationInstanceJsonSchema,
+      ]),
+      "Protojson instance payload.",
     ),
-    reference_trajectory: field(
-      interchangeTrajectorySchema.optional(),
-      "Reference trajectory in wire format.",
-    ),
-    prompt: field(z.string().optional(), "Eval prompt."),
-    response: field(z.string().optional(), "Final response."),
-    reference: field(z.string().optional(), "Reference answer text."),
   }),
   {
-    id: "ProtoTrajectoryInstance",
-    title: "ProtoTrajectoryInstance",
-    description: "Proto-compatible evaluation instance with JSON-string tool_input.",
+    id: "InstancesJsonlRow",
+    title: "InstancesJsonlRow",
+    description: "Type-tagged JSONL row for Vertex EvaluateInstances batching.",
   },
 );
 
-export type InterchangeToolCallZod = z.infer<typeof interchangeToolCallSchema>;
-export type InterchangeTrajectoryZod = z.infer<typeof interchangeTrajectorySchema>;
-export type TabularToolCallZod = z.infer<typeof tabularToolCallSchema>;
-export type AgentEventZod = z.infer<typeof agentEventSchema>;
-export type ConversationTurnZod = z.infer<typeof conversationTurnSchema>;
-export type AgentConfigZod = z.infer<typeof agentConfigSchema>;
-export type AgentTraceZod = z.infer<typeof agentTraceSchema>;
+export type ProtojsonToolCallZod = z.infer<typeof protojsonToolCallSchema>;
+export type ProtojsonTrajectoryZod = z.infer<typeof protojsonTrajectorySchema>;
+export type EvaluationInstanceJsonZod = z.infer<typeof evaluationInstanceJsonSchema>;
+export type TrajectoryInstancesJsonZod = z.infer<typeof trajectoryInstancesJsonSchema>;
+export type HarnessMetricsZod = z.infer<typeof harnessMetricsSchema>;
 export type EvalDatasetRowZod = z.infer<typeof evalDatasetRowSchema>;
-export type ProtoTrajectoryInstanceZod = z.infer<
-  typeof protoTrajectoryInstanceSchema
->;
+export type InstancesJsonlRowZod = z.infer<typeof instancesJsonlRowSchema>;

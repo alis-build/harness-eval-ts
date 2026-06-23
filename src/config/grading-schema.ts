@@ -1,5 +1,8 @@
 /**
  * Zod schema for standalone grading YAML (`grading.yaml`).
+ *
+ * The top-level `judge` block reuses {@link ConfigPartialSchema} fields plus
+ * grader-specific concurrency and system-instruction overrides.
  */
 
 import { z } from "zod";
@@ -19,4 +22,5 @@ export const GradingConfigSchema = z.object({
 });
 
 export type RawGradingConfig = z.infer<typeof GradingConfigSchema>;
+/** Raw shape of the nested `judge` block before path resolution. */
 export type RawJudgeConfig = z.infer<typeof JudgeConfigSchema>;

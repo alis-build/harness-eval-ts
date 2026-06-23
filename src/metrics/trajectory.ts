@@ -1,24 +1,39 @@
 /**
  * Trajectory-level metrics for comparing predicted and reference tool-call sequences.
  *
- * Metric definitions align with upstream evaluation service trajectory specs.
+ * Aligns with Vertex AI EvaluationService trajectory metrics (exact match,
+ * in-order, any-order, precision, recall, single tool use). Tool calls are
+ * compared by `(tool_name, serialized tool_input)` identity after normalization.
+ *
+ * Binary metrics return 0 or 1; precision and recall return fractions in [0, 1].
  */
 
-import type {
-  InterchangeToolCall,
-  TabularToolCall,
-  TrajectoryMetrics,
-} from "../types/eval-interchange";
-import { serializeToolInput } from "../eval-interchange/build";
+import { serializeToolInput } from "../eval-interchange/normalize";
 
+/** Canonical wire tool call used internally for comparison. */
+export interface WireToolCall {
+  tool_name: string;
+  tool_input: string;
+}
+
+/** All trajectory metric scores for one predicted/reference pair. */
+export interface TrajectoryMetrics {
+  trajectory_exact_match: number;
+  trajectory_in_order_match: number;
+  trajectory_any_order_match: number;
+  trajectory_precision: number;
+  trajectory_recall: number;
+  trajectory_single_tool_use: number;
+}
+
+/** Input accepted by trajectory metrics — wire or harness/YAML shapes. */
 export type TrajectoryInput =
-  | InterchangeToolCall[]
-  | TabularToolCall[]
-  | Array<{ tool_name: string; tool_input: unknown }>;
+  | WireToolCall[]
+  | Array<{ tool_name: string; tool_input: unknown | string }>;
 
 function normalizeToolCall(
   toolCall: TrajectoryInput[number],
-): InterchangeToolCall {
+): WireToolCall {
   if (typeof toolCall.tool_input === "string") {
     return {
       tool_name: toolCall.tool_name,
@@ -32,17 +47,23 @@ function normalizeToolCall(
   };
 }
 
-function normalizeTrajectory(trajectory: TrajectoryInput): InterchangeToolCall[] {
+function normalizeTrajectory(trajectory: TrajectoryInput): WireToolCall[] {
   return trajectory.map(normalizeToolCall);
 }
 
-function toolCallKey(toolCall: InterchangeToolCall): string {
+/** Stable composite key for multiset and equality checks. */
+function toolCallKey(toolCall: WireToolCall): string {
   return `${toolCall.tool_name}\0${toolCall.tool_input}`;
 }
 
+/**
+ * Count predicted tool calls that appear in reference (multiset intersection).
+ *
+ * Duplicate tool calls are matched one-for-one; order does not matter.
+ */
 function multisetIntersectionSize(
-  predicted: InterchangeToolCall[],
-  reference: InterchangeToolCall[],
+  predicted: WireToolCall[],
+  reference: WireToolCall[],
 ): number {
   const refCounts = new Map<string, number>();
   for (const toolCall of reference) {
@@ -63,9 +84,15 @@ function multisetIntersectionSize(
   return matched;
 }
 
+/**
+ * Whether reference appears as a subsequence of predicted (order preserved).
+ *
+ * Extra predicted calls between reference steps are allowed (in-order match
+ * semantics per Vertex).
+ */
 function isSubsequence(
-  predicted: InterchangeToolCall[],
-  reference: InterchangeToolCall[],
+  predicted: WireToolCall[],
+  reference: WireToolCall[],
 ): boolean {
   let refIndex = 0;
   for (const toolCall of predicted) {
@@ -77,10 +104,7 @@ function isSubsequence(
   return refIndex === reference.length;
 }
 
-function arraysEqual(
-  left: InterchangeToolCall[],
-  right: InterchangeToolCall[],
-): boolean {
+function arraysEqual(left: WireToolCall[], right: WireToolCall[]): boolean {
   if (left.length !== right.length) return false;
   return left.every((toolCall, index) => {
     const other = right[index]!;
@@ -88,6 +112,7 @@ function arraysEqual(
   });
 }
 
+/** Exact sequence equality after normalization. */
 export function trajectoryExactMatch(
   predicted: TrajectoryInput,
   reference: TrajectoryInput,
@@ -97,6 +122,7 @@ export function trajectoryExactMatch(
   return arraysEqual(predictedNorm, referenceNorm) ? 1 : 0;
 }
 
+/** Reference is a subsequence of predicted (order preserved, extras allowed). */
 export function trajectoryInOrderMatch(
   predicted: TrajectoryInput,
   reference: TrajectoryInput,
@@ -106,6 +132,7 @@ export function trajectoryInOrderMatch(
   return isSubsequence(predictedNorm, referenceNorm) ? 1 : 0;
 }
 
+/** Same multiset of tool calls; length must match. */
 export function trajectoryAnyOrderMatch(
   predicted: TrajectoryInput,
   reference: TrajectoryInput,
@@ -121,6 +148,11 @@ export function trajectoryAnyOrderMatch(
     : 0;
 }
 
+/**
+ * Fraction of predicted tool calls that appear in reference (multiset).
+ *
+ * Returns 1 when both trajectories are empty.
+ */
 export function trajectoryPrecision(
   predicted: TrajectoryInput,
   reference: TrajectoryInput,
@@ -133,6 +165,11 @@ export function trajectoryPrecision(
     predictedNorm.length;
 }
 
+/**
+ * Fraction of reference tool calls matched in predicted (multiset recall).
+ *
+ * Returns 1 when reference is empty and predicted is empty.
+ */
 export function trajectoryRecall(
   predicted: TrajectoryInput,
   reference: TrajectoryInput,
@@ -145,6 +182,7 @@ export function trajectoryRecall(
     referenceNorm.length;
 }
 
+/** Both trajectories have exactly one call and they match. */
 export function trajectorySingleToolUse(
   predicted: TrajectoryInput,
   reference: TrajectoryInput,
@@ -157,6 +195,7 @@ export function trajectorySingleToolUse(
     : 0;
 }
 
+/** Compute all trajectory metrics in one pass. */
 export function computeTrajectoryMetrics(
   predicted: TrajectoryInput,
   reference: TrajectoryInput,
@@ -170,3 +209,18 @@ export function computeTrajectoryMetrics(
     trajectory_single_tool_use: trajectorySingleToolUse(predicted, reference),
   };
 }
+
+/**
+ * Parse a wire tool_input string to JSON, or return the raw string on failure.
+ *
+ * Exported for tool-call metrics that need structured arg comparison.
+ */
+function parseToolInput(toolInput: string): unknown {
+  try {
+    return JSON.parse(toolInput) as unknown;
+  } catch {
+    return toolInput;
+  }
+}
+
+export { parseToolInput };

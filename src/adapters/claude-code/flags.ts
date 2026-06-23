@@ -1,9 +1,13 @@
 /**
  * Build CLI args for Claude Code judge subprocesses (JSON output, not stream-json).
+ *
+ * Shared flag assembly for harness runs (`buildArgs`) and LLM grading judges
+ * (`buildJudgeArgs`).
  */
 
 import type { ClaudeCodeAdapterConfig, ClaudeCodeOptions } from "./types";
 
+/** Append repeated `--flag value` pairs for array config fields. */
 function pushRepeatableFlag(args: string[], flag: string, values?: string[]): void {
   if (!values) return;
   for (const value of values) {
@@ -11,6 +15,10 @@ function pushRepeatableFlag(args: string[], flag: string, values?: string[]): vo
   }
 }
 
+/**
+ * Append an optional CLI flag. Boolean `true` emits the flag alone; other
+ * scalars emit `--flag value`.
+ */
 function pushOptionalFlag(
   args: string[],
   flag: string,
@@ -101,7 +109,12 @@ export function buildArgs(config: ClaudeCodeAdapterConfig): string[] {
   return args;
 }
 
-/** Build args for an LLM judge subprocess (`--output-format json`). */
+/**
+ * Build args for an LLM judge subprocess (`--output-format json`).
+ *
+ * Defaults permission mode to `bypassPermissions` so the judge does not
+ * block on tool permission prompts during single-shot JSON grading.
+ */
 export function buildJudgeArgs(
   prompt: string,
   config: ClaudeCodeOptions & { model?: string } = {},

@@ -1,5 +1,14 @@
 /**
  * `harness-eval envelope` — build EvalRunEnvelope and interchange projections.
+ *
+ * Reads a suite run report (and optional grading JSON), builds a versioned
+ * {@link EvalRunEnvelope}, and serializes one of three projections:
+ *
+ *   - `envelope` — full nested JSON document (default)
+ *   - `trajectory` — JSONL of {@link EvalDatasetRow} per repetition
+ *   - `instances` — JSONL of {@link InstancesJsonlRow} for Vertex batch upload
+ *
+ * Exit code 0 when behavioral pass, 1 when any cell failed assertions.
  */
 
 import { readFile, writeFile } from "node:fs/promises";
@@ -8,26 +17,29 @@ import { fileURLToPath } from "node:url";
 
 import { buildEvalRunEnvelopeFromFiles } from "../../eval-record/build";
 import {
-  toAgentTrace,
-  toProtoInstances,
+  toInstancesJsonl,
   toTrajectory,
 } from "../../eval-interchange/projections";
 import type { EvalRunEnvelope } from "../../types/eval-record";
 import { getOption, hasOption, type ParsedArgs } from "../args";
 
+/** Supported `--projection` values for envelope output. */
 export type EnvelopeProjection =
   | "envelope"
   | "trajectory"
-  | "instances"
-  | "agent-trace";
+  | "instances";
 
 const PROJECTIONS = new Set<EnvelopeProjection>([
   "envelope",
   "trajectory",
   "instances",
-  "agent-trace",
 ]);
 
+/**
+ * Parse and validate `--projection` CLI flag.
+ *
+ * @returns `"envelope"` when omitted; `undefined` when value is invalid.
+ */
 export function parseEnvelopeProjection(
   value: string | undefined,
 ): EnvelopeProjection | undefined {
@@ -38,6 +50,11 @@ export function parseEnvelopeProjection(
   return undefined;
 }
 
+/**
+ * Serialize an envelope to stdout/file string for the chosen projection.
+ *
+ * Trajectory and instances projections emit NDJSON (one JSON object per line).
+ */
 export function serializeEnvelopeProjection(
   envelope: EvalRunEnvelope,
   projection: EnvelopeProjection,
@@ -46,15 +63,14 @@ export function serializeEnvelopeProjection(
     case "trajectory":
       return `${toTrajectory(envelope).map((row) => JSON.stringify(row)).join("\n")}\n`;
     case "instances":
-      return `${JSON.stringify(toProtoInstances(envelope), null, 2)}\n`;
-    case "agent-trace":
-      return `${JSON.stringify(toAgentTrace(envelope), null, 2)}\n`;
+      return `${toInstancesJsonl(envelope).map((row) => JSON.stringify(row)).join("\n")}\n`;
     case "envelope":
     default:
       return `${JSON.stringify(envelope, null, 2)}\n`;
   }
 }
 
+/** Read harness-eval package version for envelope harness.frameworkVersion. */
 async function readFrameworkVersion(): Promise<string | undefined> {
   try {
     const packagePath = join(
@@ -69,11 +85,16 @@ async function readFrameworkVersion(): Promise<string | undefined> {
   }
 }
 
+/**
+ * CLI entry point for the `envelope` subcommand.
+ *
+ * @returns Process exit code: 0 on behavioral pass, 1 on failure, 2 on usage/error.
+ */
 export async function envelopeCommand(args: ParsedArgs): Promise<number> {
   const reportPath = args.positional[0];
   if (!reportPath) {
     console.error(
-      "usage: harness-eval envelope <report.json> [--output path] [--grading path] [--suite path] [--projection envelope|trajectory|instances|agent-trace] [--include-raw-stream-events] [--no-transcript]",
+      "usage: harness-eval envelope <report.json> [--output path] [--grading path] [--suite path] [--projection envelope|trajectory|instances] [--include-raw-stream-events] [--no-transcript]",
     );
     return 2;
   }
@@ -87,7 +108,7 @@ export async function envelopeCommand(args: ParsedArgs): Promise<number> {
 
   if (!projection) {
     console.error(
-      "invalid --projection; expected envelope, trajectory, instances, or agent-trace",
+      "invalid --projection; expected envelope, trajectory, or instances",
     );
     return 2;
   }

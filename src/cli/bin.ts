@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+/**
+ * CLI executable entry point — delegates to {@link main} and exits with its code.
+ */
 
 import { main } from "./main";
 

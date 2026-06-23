@@ -8,6 +8,11 @@ import { formatReport } from "../../reporter/index";
 import type { SuiteReport } from "../../runner/types";
 import { getOption, type ParsedArgs } from "../args";
 
+/**
+ * Execute `harness-eval format`: re-render a saved report JSON.
+ *
+ * @returns 0 when all cells pass, 1 otherwise, 2 on load errors.
+ */
 export async function formatCommand(args: ParsedArgs): Promise<number> {
   const reportPath = args.positional[0];
   if (!reportPath) {

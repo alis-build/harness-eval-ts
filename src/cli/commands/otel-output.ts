@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { trajectoryToOtlp } from "../../otel/emitter";
 import type { SuiteReport, TestSuite } from "../../runner/types";
 
+/** Sanitize case/cell labels for use in OTLP artifact filenames. */
 function safeFilePart(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]+/g, "_");
 }

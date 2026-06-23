@@ -19,6 +19,7 @@ import {
   resolveProgressMode,
 } from "../progress";
 
+/** Parse an optional integer CLI flag; returns undefined when absent or invalid. */
 function optionalOptionInt(
   options: Record<string, string | boolean>,
   name: string,
@@ -29,6 +30,11 @@ function optionalOptionInt(
   return Number.isFinite(n) ? n : undefined;
 }
 
+/**
+ * Execute `harness-eval grade`: LLM outcome grading on a suite report JSON.
+ *
+ * @returns 0 when all expectations pass, 1 on failure, 2 on usage/load errors or no reps graded.
+ */
 export async function gradeCommand(args: ParsedArgs): Promise<number> {
   const reportPath = args.positional[0];
   if (!reportPath) {

@@ -91,7 +91,7 @@ export function matches(value: unknown, predicate: unknown): boolean {
   return true;
 }
 
-/** Apply a single leaf operator. Caller guarantees `op` is in LEAF_OPS. */
+/** Apply a single leaf operator to a value. Caller guarantees `op` is in LEAF_OPS. */
 function matchesLeaf(value: unknown, op: string, target: unknown): boolean {
   switch (op) {
     case "equals":
@@ -124,6 +124,7 @@ function matchesLeaf(value: unknown, op: string, target: unknown): boolean {
   }
 }
 
+/** True for non-null, non-array objects. */
 function isPlainObject(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
 }

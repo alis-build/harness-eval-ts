@@ -1,5 +1,8 @@
 /**
  * CLI progress reporting for long-running harness and grade commands.
+ *
+ * Progress writes to stderr by default so stdout remains free for report
+ * output. Supports human-readable modes and newline-delimited JSON events.
  */
 
 import type { Writable } from "node:stream";
@@ -9,14 +12,17 @@ import type { GradeProgressEvent as GraderGradeProgressEvent } from "../grader/t
 import type { AssertionResult } from "../types/assertions";
 import type { CellReport, ProgressCallback } from "../runner/types";
 
+/** Progress display mode for run and grade commands. */
 export type ProgressMode = "default" | "quiet" | "verbose" | "json";
 
+/** ANSI SGR codes for progress output. Disabled when {@link resolveProgressColor} returns false. */
 const GREEN = "\x1b[32m";
 const RED = "\x1b[31m";
 const YELLOW = "\x1b[33m";
 const DIM = "\x1b[2m";
 const RESET = "\x1b[0m";
 
+/** Options for {@link createRunProgressHandler}. */
 export interface RunProgressOptions {
   mode: ProgressMode;
   maxConcurrent?: number;
@@ -24,6 +30,7 @@ export interface RunProgressOptions {
   stream?: Writable;
 }
 
+/** Options for {@link createGradeProgressHandler}. */
 export interface GradeProgressOptions {
   mode: ProgressMode;
   maxConcurrent?: number;
@@ -31,6 +38,11 @@ export interface GradeProgressOptions {
   stream?: Writable;
 }
 
+/**
+ * Resolve progress mode from `--progress`, `--quiet`, or `--verbose` flags.
+ *
+ * Explicit `--progress` wins; otherwise `--quiet` / `--verbose` map to modes.
+ */
 export function resolveProgressMode(
   options: Record<string, string | boolean>,
 ): ProgressMode {
@@ -48,7 +60,12 @@ export function resolveProgressMode(
   return "default";
 }
 
-/** Whether to emit ANSI colors on the progress stream (stderr). */
+/**
+ * Whether to emit ANSI colors on the progress stream (stderr).
+ *
+ * Precedence: `--no-color` → off; `--color` → on; `NO_COLOR` env → off;
+ * `FORCE_COLOR` (non-zero) → on; otherwise TTY detection on `stream`.
+ */
 export function resolveProgressColor(
   options: Record<string, string | boolean>,
   stream: Writable = process.stderr,
@@ -67,30 +84,41 @@ export function resolveProgressColor(
   );
 }
 
+/** Green checkmark prefix for per-rep success lines. */
 function okMark(color: boolean): string {
   return color ? `${GREEN}✓${RESET}` : "✓";
 }
 
+/** Red cross prefix for per-rep failure lines. */
 function failMark(color: boolean): string {
   return color ? `${RED}✗${RESET}` : "✗";
 }
 
+/** Inline lowercase status word for repetition rows. */
 function okStatus(color: boolean): string {
   return color ? `${GREEN}ok${RESET}` : "ok";
 }
 
+/** Inline uppercase status word for repetition failures. */
 function failStatus(color: boolean): string {
   return color ? `${RED}FAIL${RESET}` : "FAIL";
 }
 
+/** Uppercase cell-level pass label in {@link formatCellSummary}. */
 function passLabel(color: boolean): string {
   return color ? `${GREEN}PASS${RESET}` : "PASS";
 }
 
+/** Uppercase cell-level fail label in {@link formatCellSummary}. */
 function failLabel(color: boolean): string {
   return color ? `${RED}FAIL${RESET}` : "FAIL";
 }
 
+/**
+ * Build a {@link ProgressCallback} for suite runs.
+ *
+ * Writes to `options.stream` (default stderr). JSON mode emits one event per line.
+ */
 export function createRunProgressHandler(
   options: RunProgressOptions,
 ): ProgressCallback {
@@ -231,6 +259,7 @@ export function createRunProgressHandler(
   };
 }
 
+/** Build a progress handler for outcome grading ({@link GradeProgressEvent}). */
 export function createGradeProgressHandler(
   options: GradeProgressOptions,
 ): (event: GraderGradeProgressEvent) => void {
@@ -340,10 +369,17 @@ export function createGradeProgressHandler(
   };
 }
 
+/**
+ * Write one NDJSON progress event line to the progress stream.
+ *
+ * JSON mode keeps stdout clean for machine-readable reports while still
+ * exposing structured progress for CI log parsers.
+ */
 function writeJson(stream: Writable, value: unknown): void {
   stream.write(`${JSON.stringify(value)}\n`);
 }
 
+/** Format milliseconds as a human-readable duration string. */
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   const sec = ms / 1000;
@@ -356,6 +392,12 @@ export function formatDuration(ms: number): string {
   return `${hr}h ${remMin}m`;
 }
 
+/**
+ * Estimate remaining time from average completed rep duration.
+ *
+ * Uses a simple running mean — good enough for long suites without storing
+ * per-rep history. Returns `undefined` at start and when all reps are done.
+ */
 function formatEta(
   totalDurationMs: number,
   completed: number,
@@ -367,11 +409,17 @@ function formatEta(
   return `~${formatDuration(Math.round(remaining))} remaining`;
 }
 
+/** Truncate error text for single-line progress rows (Unicode ellipsis). */
 function truncate(text: string, max: number): string {
   if (text.length <= max) return text;
   return `${text.slice(0, max - 1)}…`;
 }
 
+/**
+ * Compact per-assertion pass/fail summary for `--progress verbose` rep lines.
+ *
+ * @returns Comma-separated `✓ description` / `✗ description` fragments, or empty string.
+ */
 function formatAssertionSummary(
   results?: AssertionResult[],
   color = false,
@@ -384,6 +432,7 @@ function formatAssertionSummary(
     .join(", ");
 }
 
+/** One-line summary when a matrix cell finishes (used in default progress mode). */
 export function formatCellSummary(cell: CellReport, color: boolean): string {
   const mark = cell.passed ? okMark(color) : failMark(color);
   const status = cell.passed ? passLabel(color) : failLabel(color);

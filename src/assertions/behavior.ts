@@ -40,6 +40,7 @@ export function evaluateRespondedWithoutToolCalls(
   };
 }
 
+/** Assert the session stayed within the reported turn count. */
 export function evaluateIterationsWithin(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "iterations_within" }>,
@@ -53,6 +54,7 @@ export function evaluateIterationsWithin(
   };
 }
 
+/** Assert total session cost in USD is within budget. */
 export function evaluateCostWithinUsd(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "cost_within_usd" }>,
@@ -66,6 +68,7 @@ export function evaluateCostWithinUsd(
   };
 }
 
+/** Assert wall-clock session duration is within budget. */
 export function evaluateDurationWithinMs(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "duration_within_ms" }>,
@@ -79,6 +82,7 @@ export function evaluateDurationWithinMs(
   };
 }
 
+/** Assert the final stop reason matches one of the allowed values. */
 export function evaluateFinishedWith(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "finished_with" }>,
@@ -97,6 +101,7 @@ export function evaluateFinishedWith(
 
 // response text
 
+/** Assert `finalResponse` contains the given substring. */
 export function evaluateResponseContains(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "response_contains" }>,
@@ -109,6 +114,7 @@ export function evaluateResponseContains(
   };
 }
 
+/** Assert `finalResponse` does not contain the given substring. */
 export function evaluateResponseNotContains(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "response_not_contains" }>,
@@ -121,6 +127,7 @@ export function evaluateResponseNotContains(
   };
 }
 
+/** Assert `finalResponse` matches a regular expression. */
 export function evaluateResponseMatches(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "response_matches" }>,

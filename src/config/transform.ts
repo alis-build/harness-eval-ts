@@ -24,6 +24,7 @@ import type {
 } from "../types/assertions";
 import { parseCardinality } from "../assertions/cardinality";
 import type { MatrixCell, TestCase, TestSuite } from "../runner/types";
+import type { ReferenceTrajectoryConfig } from "../types/eval-interchange";
 import type { RawMatrixCell, RawTestCase, RawTestSuite, RawSuiteDirectory } from "./schema";
 
 // error type
@@ -65,6 +66,7 @@ export function transformTestCases(
   return raw.map((c, i) => transformTestCase(c, `${pathPrefix}[${i}]`));
 }
 
+/** Merge suite-level parts shared by single-file and directory transforms. */
 function transformSuiteParts(raw: RawTestSuite): TestSuite {
   return {
     adapter: raw.adapter,
@@ -74,6 +76,35 @@ function transformSuiteParts(raw: RawTestSuite): TestSuite {
   };
 }
 
+/**
+ * Normalize reference trajectory YAML into {@link ReferenceTrajectoryConfig}.
+ *
+ * Accepts a bare step array or `{ tool_name_mode?, steps }` object form.
+ */
+function normalizeReferenceTrajectory(
+  raw: RawTestCase["reference_trajectory"],
+  path: string,
+): ReferenceTrajectoryConfig | undefined {
+  if (raw === undefined) return undefined;
+
+  if (Array.isArray(raw)) {
+    return { steps: raw };
+  }
+
+  if (!isPlainObject(raw) || !Array.isArray(raw.steps)) {
+    throw new ConfigError(
+      "reference_trajectory must be an array of tool calls or { tool_name_mode?, steps: [...] }",
+      path,
+    );
+  }
+
+  return {
+    tool_name_mode: raw.tool_name_mode,
+    steps: raw.steps,
+  };
+}
+
+/** Map raw matrix cell YAML to runtime {@link MatrixCell}. */
 function transformMatrixCell(raw: RawMatrixCell): MatrixCell {
   return {
     label: raw.label,
@@ -82,6 +113,7 @@ function transformMatrixCell(raw: RawMatrixCell): MatrixCell {
   };
 }
 
+/** Map one raw test case to runtime {@link TestCase}, transforming assertions. */
 function transformTestCase(raw: RawTestCase, path: string): TestCase {
   return {
     id: raw.id,
@@ -89,7 +121,10 @@ function transformTestCase(raw: RawTestCase, path: string): TestCase {
     category: raw.category,
     notes: raw.notes,
     expectations: raw.expectations,
-    reference_trajectory: raw.reference_trajectory,
+    reference_trajectory: normalizeReferenceTrajectory(
+      raw.reference_trajectory,
+      `${path}.reference_trajectory`,
+    ),
     human_ratings: raw.human_ratings,
     repetitions: raw.repetitions,
     config: raw.config,
@@ -104,6 +139,17 @@ function transformTestCase(raw: RawTestCase, path: string): TestCase {
 /** Keys that may appear alongside an assertion-type key. Not assertion types themselves. */
 const SIBLING_KEYS = new Set(["threshold"]);
 
+/**
+ * Parse optional `threshold` sibling and delegate the assertion body to
+ * {@link transformAssertion}.
+ *
+ * @throws {ConfigError} When the wrapper is not an object, threshold is out of
+ *   `[0, 1]`, or the nested assertion fails validation.
+ *
+ * @example
+ * transformThresholdedAssertion({ called: "Read", threshold: 0.9 }, "path")
+ * // → { assertion: { type: "called", tool: "Read" }, threshold: 0.9 }
+ */
 function transformThresholdedAssertion(
   raw: unknown,
   path: string,
@@ -136,6 +182,19 @@ function transformThresholdedAssertion(
  * Finds the single non-sibling key, dispatches to the per-type transformer.
  * Per-type transformers handle both verbose-object and shortcut-scalar input
  * shapes where applicable.
+ *
+ * @param raw - Single assertion object from parsed YAML (may include `threshold` sibling).
+ * @param path - JSON-path-like location for error messages (e.g. `cases[0].assertions[1]`).
+ * @returns Runtime {@link Assertion} tagged union.
+ * @throws {ConfigError} When the object has no assertion key, multiple type keys, or an unknown type.
+ *
+ * @example
+ * transformAssertion({ called: "Read" }, "cases[0].assertions[0]")
+ * // → { type: "called", tool: "Read" }
+ *
+ * @example
+ * transformAssertion({ called: { tool: "Read", times: ">= 2" } }, "path")
+ * // → { type: "called", tool: "Read", times: ">= 2" }
  */
 export function transformAssertion(raw: unknown, path: string): Assertion {
   if (!isPlainObject(raw)) {
@@ -208,8 +267,24 @@ export function transformAssertion(raw: unknown, path: string): Assertion {
   }
 }
 
-// per-assertion transformers
+// per-assertion transformers — YAML single-key shape → runtime tagged union
 
+/**
+ * Transform `called` YAML (scalar or `{tool, times?}`) to runtime assertion.
+ *
+ * @throws {ConfigError} When value is neither string nor object, tool is invalid,
+ *   or `times` is not a valid cardinality string.
+ *
+ * @example
+ * // Scalar shortcut
+ * transformCalled("mcp__api__search_skills", "path")
+ * // → { type: "called", tool: "mcp__api__search_skills" }
+ *
+ * @example
+ * // Verbose form with cardinality
+ * transformCalled({ tool: "Read", times: ">= 1" }, "path")
+ * // → { type: "called", tool: "Read", times: ">= 1" }
+ */
 function transformCalled(value: unknown, path: string): Assertion {
   // Scalar shortcut: bare string is the tool name.
   if (typeof value === "string") {
@@ -237,6 +312,14 @@ function transformCalled(value: unknown, path: string): Assertion {
   return { type: "called", tool, times };
 }
 
+/**
+ * Transform `not_called` YAML (scalar or `{tool}`).
+ *
+ * @throws {ConfigError} When value is neither string nor object with a valid `tool`.
+ *
+ * @example
+ * transformNotCalled("Bash", "path") // → { type: "not_called", tool: "Bash" }
+ */
 function transformNotCalled(value: unknown, path: string): Assertion {
   if (typeof value === "string") {
     return { type: "not_called", tool: value };
@@ -253,16 +336,43 @@ function transformNotCalled(value: unknown, path: string): Assertion {
   };
 }
 
+/**
+ * Transform `called_any_of` — bare tool list or `{tools: [...]}`.
+ *
+ * @throws {ConfigError} When the value is not an array or `{tools: [...]}` object.
+ *
+ * @example
+ * transformCalledAnyOf(["Read", "Glob"], "path")
+ * // → { type: "called_any_of", tools: ["Read", "Glob"] }
+ */
 function transformCalledAnyOf(value: unknown, path: string): Assertion {
   const tools = requireToolPatternList(value, path);
   return { type: "called_any_of", tools };
 }
 
+/**
+ * Transform `called_all_of` — bare tool list or `{tools: [...]}`.
+ *
+ * @throws {ConfigError} When the value is not an array or `{tools: [...]}` object.
+ *
+ * @example
+ * transformCalledAllOf({ tools: ["Read", "Grep"] }, "path")
+ * // → { type: "called_all_of", tools: ["Read", "Grep"] }
+ */
 function transformCalledAllOf(value: unknown, path: string): Assertion {
   const tools = requireToolPatternList(value, path);
   return { type: "called_all_of", tools };
 }
 
+/**
+ * Transform `called_before: {first, then}` ordering assertion.
+ *
+ * @throws {ConfigError} When value is not an object or `first`/`then` are invalid patterns.
+ *
+ * @example
+ * transformCalledBefore({ first: "SearchSkills", then: "LoadSkill" }, "path")
+ * // → { type: "called_before", first: "SearchSkills", then: "LoadSkill" }
+ */
 function transformCalledBefore(value: unknown, path: string): Assertion {
   if (!isPlainObject(value)) {
     throw new ConfigError(
@@ -275,6 +385,19 @@ function transformCalledBefore(value: unknown, path: string): Assertion {
   return { type: "called_before", first, then };
 }
 
+/**
+ * Transform `sequence` — tool list with optional `strict` flag.
+ *
+ * @throws {ConfigError} When value is neither a pattern array nor `{tools, strict?}` object.
+ *
+ * @example
+ * // Bare array (non-strict by default)
+ * transformSequence(["Read", "Edit"], "path")
+ *
+ * @example
+ * // Explicit strict ordering
+ * transformSequence({ tools: ["Read", "Edit"], strict: true }, "path")
+ */
 function transformSequence(value: unknown, path: string): Assertion {
   // Two forms: bare list of patterns, or {tools: [...], strict?: bool}.
   if (Array.isArray(value)) {
@@ -297,6 +420,19 @@ function transformSequence(value: unknown, path: string): Assertion {
   return { type: "sequence", tools, strict };
 }
 
+/**
+ * Transform `called_with: {tool, args}` with predicate validation on args.
+ *
+ * @throws {ConfigError} When `tool` or `args` is missing/invalid, or `args` fails
+ *   {@link validatePredicate}.
+ *
+ * @example
+ * transformCalledWith(
+ *   { tool: "Read", args: { path: { contains: "README" } } },
+ *   "path",
+ * )
+ * // → { type: "called_with", tool: "Read", args: { path: { contains: "README" } } }
+ */
 function transformCalledWith(value: unknown, path: string): Assertion {
   if (!isPlainObject(value)) {
     throw new ConfigError(
@@ -312,6 +448,15 @@ function transformCalledWith(value: unknown, path: string): Assertion {
   return { type: "called_with", tool, args: value.args as Predicate };
 }
 
+/**
+ * Transform `responded_without_tool_calls` — accepts true or empty object.
+ *
+ * @throws {ConfigError} When value is neither `true`, null, nor an empty object.
+ *
+ * @example
+ * transformRespondedWithoutToolCalls(true, "path")
+ * // → { type: "responded_without_tool_calls" }
+ */
 function transformRespondedWithoutToolCalls(
   value: unknown,
   path: string,
@@ -330,6 +475,19 @@ function transformRespondedWithoutToolCalls(
   );
 }
 
+/**
+ * Transform budget assertions (`iterations_within`, `cost_within_usd`, `duration_within_ms`).
+ *
+ * @throws {ConfigError} When `max` is missing, non-positive, or not a number.
+ *
+ * @example
+ * transformScalarMax(5, "path", "iterations_within")
+ * // → { type: "iterations_within", max: 5 }
+ *
+ * @example
+ * transformScalarMax({ max: 2.5 }, "path", "cost_within_usd")
+ * // → { type: "cost_within_usd", max: 2.5 }
+ */
 function transformScalarMax(
   value: unknown,
   path: string,
@@ -352,6 +510,15 @@ function transformScalarMax(
   return { type, max };
 }
 
+/**
+ * Transform `finished_with` — stop reason string, list, or `{reasons}`.
+ *
+ * @throws {ConfigError} When value is not a string, string array, or `{reasons}` object.
+ *
+ * @example
+ * transformFinishedWith("end_turn", "path")
+ * // → { type: "finished_with", reasons: "end_turn" }
+ */
 function transformFinishedWith(value: unknown, path: string): Assertion {
   // Three forms: bare string, bare array of strings, or {reasons: string | string[]}.
   if (typeof value === "string") {
@@ -381,6 +548,15 @@ function transformFinishedWith(value: unknown, path: string): Assertion {
   );
 }
 
+/**
+ * Transform `response_contains` / `response_not_contains` scalar or `{text}`.
+ *
+ * @throws {ConfigError} When value is neither a string nor `{text: string}`.
+ *
+ * @example
+ * transformResponseText("done", "path", "response_contains")
+ * // → { type: "response_contains", text: "done" }
+ */
 function transformResponseText(
   value: unknown,
   path: string,
@@ -398,6 +574,15 @@ function transformResponseText(
   );
 }
 
+/**
+ * Transform `response_matches: {pattern, flags?}`.
+ *
+ * @throws {ConfigError} When `pattern` is missing or not a string.
+ *
+ * @example
+ * transformResponseMatches({ pattern: "error\\d+", flags: "i" }, "path")
+ * // → { type: "response_matches", pattern: "error\\d+", flags: "i" }
+ */
 function transformResponseMatches(value: unknown, path: string): Assertion {
   if (!isPlainObject(value)) {
     throw new ConfigError(
@@ -413,14 +598,42 @@ function transformResponseMatches(value: unknown, path: string): Assertion {
   return { type: "response_matches", pattern, flags };
 }
 
+/**
+ * Transform compound `all_of` assertion list.
+ *
+ * @throws {ConfigError} When value is not an array or `{assertions: [...]}`.
+ *
+ * @example
+ * transformAllOf([{ called: "Read" }, { not_called: "Bash" }], "path")
+ */
 function transformAllOf(value: unknown, path: string): Assertion {
   return { type: "all_of", assertions: transformCompoundList(value, path) };
 }
 
+/**
+ * Transform compound `any_of` assertion list.
+ *
+ * @throws {ConfigError} When value is not an array or `{assertions: [...]}`.
+ *
+ * @example
+ * transformAnyOf({ assertions: [{ called: "Read" }, { called: "Glob" }] }, "path")
+ */
 function transformAnyOf(value: unknown, path: string): Assertion {
   return { type: "any_of", assertions: transformCompoundList(value, path) };
 }
 
+/**
+ * Transform compound `not` — single nested assertion, no threshold.
+ *
+ * The inner assertion uses the same single-key YAML shape as top-level
+ * assertions; thresholds apply only at the outer {@link transformThresholdedAssertion} level.
+ *
+ * @throws {ConfigError} Propagates from nested {@link transformAssertion}.
+ *
+ * @example
+ * transformNot({ called: "Bash" }, "path")
+ * // → { type: "not", assertion: { type: "called", tool: "Bash" } }
+ */
 function transformNot(value: unknown, path: string): Assertion {
   // `not` takes a single assertion as its value (not a list). The inner
   // assertion uses the same single-key shape as top-level assertions, so
@@ -429,6 +642,11 @@ function transformNot(value: unknown, path: string): Assertion {
   return { type: "not", assertion: transformAssertion(value, path) };
 }
 
+/**
+ * Parse compound assertion list from array or `{assertions: [...]}`.
+ *
+ * @throws {ConfigError} When value is neither form.
+ */
 function transformCompoundList(value: unknown, path: string): Assertion[] {
   // Two forms: bare array of assertions, or {assertions: [...]}.
   const list = Array.isArray(value)
@@ -472,6 +690,9 @@ const COMPOUND_OPS = new Set(["any_of", "all_of", "not"]);
  *   - single-key object whose key is a leaf op (e.g. `{contains: "x"}`)
  *   - single-key compound (`{any_of: [...]}`, `{all_of: [...]}`, `{not: ...}`)
  *   - multi-key object (descend into fields; each value is a sub-predicate)
+ *
+ * @throws {ConfigError} When a compound op has a non-array value or a leaf op
+ *   has the wrong value type (e.g. non-string `contains`).
  */
 function validatePredicate(raw: unknown, path: string): void {
   // Scalars are valid (interpreted as equals at runtime).
@@ -511,6 +732,12 @@ function validatePredicate(raw: unknown, path: string): void {
   }
 }
 
+/**
+ * Validate a leaf predicate operator's value shape at config load time.
+ *
+ * @throws {ConfigError} When the operator's value has the wrong type or `regex`
+ *   is not a valid JavaScript regular expression.
+ */
 function validateLeafOperator(op: string, value: unknown, path: string): void {
   switch (op) {
     case "equals":
@@ -551,6 +778,7 @@ function validateLeafOperator(op: string, value: unknown, path: string): void {
 
 // small validation helpers
 
+/** Require a tool pattern string or `{ pattern }` object. */
 function requireToolPattern(value: unknown, path: string): ToolPattern {
   if (typeof value === "string") return value;
   if (isPlainObject(value) && typeof value.pattern === "string") {
@@ -562,6 +790,7 @@ function requireToolPattern(value: unknown, path: string): ToolPattern {
   );
 }
 
+/** Require a bare tool pattern array or `{ tools: [...] }` wrapper. */
 function requireToolPatternList(value: unknown, path: string): ToolPattern[] {
   // Two forms: bare array, or {tools: [...]}.
   const list = Array.isArray(value)
@@ -580,20 +809,24 @@ function requireToolPatternList(value: unknown, path: string): ToolPattern[] {
   return list.map((v, i) => requireToolPattern(v, `${path}[${i}]`));
 }
 
+/** Require a string value at `path` or throw {@link ConfigError}. */
 function requireString(value: unknown, path: string): string {
   if (typeof value === "string") return value;
   throw new ConfigError(`expected string, got ${typeOf(value)}`, path);
 }
 
+/** Require a boolean value at `path` or throw {@link ConfigError}. */
 function requireBool(value: unknown, path: string): boolean {
   if (typeof value === "boolean") return value;
   throw new ConfigError(`expected boolean, got ${typeOf(value)}`, path);
 }
 
+/** True for non-null, non-array objects (YAML mapping nodes). */
 function isPlainObject(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
 }
 
+/** Human-readable type name for config error messages. */
 function typeOf(x: unknown): string {
   if (x === null) return "null";
   if (Array.isArray(x)) return "array";

@@ -1,5 +1,7 @@
 /**
- * CLI entry point.
+ * CLI entry point — dispatches subcommands and prints usage on `--help`.
+ *
+ * Exit codes: 0 success, 1 eval/grade failure, 2 usage or load errors.
  */
 
 import { envelopeCommand } from "./commands/envelope";
@@ -13,7 +15,7 @@ const USAGE = `harness-eval — harness-level eval framework
 Usage:
   harness-eval run <suite.yaml> [--max-concurrent N] [--baseline path] [--output path] [--otel-output dir] [--format console|markdown|json] [--adapter id] [--quiet] [--verbose] [--progress default|quiet|verbose|json]
   harness-eval grade <report.json> [--config grading.yaml] [--expectations path] [--output path] [--model id] [--timeout-ms N] [--max-concurrent N] [--format console|json] [--quiet] [--verbose] [--progress default|quiet|verbose|json]
-  harness-eval envelope <report.json> [--output path] [--grading path] [--suite path] [--projection envelope|trajectory|instances|agent-trace] [--include-raw-stream-events] [--no-transcript]
+  harness-eval envelope <report.json> [--output path] [--grading path] [--suite path] [--projection envelope|trajectory|instances] [--include-raw-stream-events] [--no-transcript]
   harness-eval format <report.json> [--format console|markdown|json] [--baseline path]
   harness-eval --help
 
@@ -26,6 +28,11 @@ Usage:
   --color           force ANSI colors on progress output
 `;
 
+/**
+ * Route argv to the appropriate subcommand handler.
+ *
+ * @returns Process exit code (0 = success, 1 = eval failure, 2 = usage error).
+ */
 export async function main(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv);
 

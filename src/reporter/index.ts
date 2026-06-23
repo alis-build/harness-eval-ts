@@ -11,6 +11,12 @@ import type { ReporterOptions } from "./types";
 
 export type { ReporterOptions, ReportFormat, RenderableRow } from "./types";
 
+/**
+ * Format a {@link SuiteReport} for console, markdown, or JSON output.
+ *
+ * JSON format bypasses the renderable intermediate model and serializes the
+ * report directly. Console and markdown apply optional baseline deltas.
+ */
 export function formatReport(
   report: SuiteReport,
   options: ReporterOptions,

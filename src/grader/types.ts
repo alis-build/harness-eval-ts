@@ -3,14 +3,18 @@
  *
  * Behavioral assertions live in harness-eval assertions; expectations here
  * are natural-language outcome checks graded from trajectory transcripts.
+ * Grading runs as a second pass over a {@link SuiteReport} JSON artifact.
  */
 
 export interface GradedExpectation {
+  /** Original expectation text from the suite or sidecar file. */
   text: string;
   passed: boolean;
+  /** Quote or description supporting the pass/fail decision. */
   evidence: string;
 }
 
+/** Aggregate pass/fail counts for one grading unit (rep or full report). */
 export interface GradingSummary {
   passed: number;
   failed: number;
@@ -18,11 +22,13 @@ export interface GradingSummary {
   passRate: number;
 }
 
+/** Suggestion for improving an expectation or assertion wording. */
 export interface EvalFeedbackSuggestion {
   assertion?: string;
   reason: string;
 }
 
+/** Optional meta-feedback from the judge about expectation quality. */
 export interface EvalFeedback {
   suggestions: EvalFeedbackSuggestion[];
   overall: string;
@@ -42,6 +48,7 @@ export interface RepGradingResult {
   durationMs: number;
 }
 
+/** Full grading report for a suite run. */
 export interface SuiteGradingReport {
   gradedAt: string;
   sourceReport: string;
@@ -56,6 +63,7 @@ export interface ExpectationsMap {
   [caseId: string]: string[];
 }
 
+/** Options controlling {@link gradeReport} and the CLI `grade` command. */
 export interface GradeReportOptions {
   /** Path to the report being graded (stored in output). */
   sourceReport?: string;
@@ -84,6 +92,7 @@ export interface GradeReportOptions {
   onProgress?: (event: GradeProgressEvent) => void;
 }
 
+/** Progress events emitted during outcome grading. */
 export type GradeProgressEvent =
   | { kind: "grade-start"; total: number }
   | {
@@ -103,8 +112,10 @@ export type GradeProgressEvent =
       passedExpectations: number;
     };
 
+/** Pluggable grader implementation (defaults to Claude subprocess). */
 export type GraderFn = (input: GraderInput) => Promise<GraderOutput>;
 
+/** Input passed to a grader for one repetition. */
 export interface GraderInput {
   prompt: string;
   transcript: string;
@@ -112,6 +123,7 @@ export interface GraderInput {
   systemInstruction?: string;
 }
 
+/** Parsed grader response before alignment with input expectation order. */
 export interface GraderOutput {
   expectations: GradedExpectation[];
   summary: GradingSummary;

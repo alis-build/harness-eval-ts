@@ -2,7 +2,8 @@
  * zod schemas for the YAML on-disk shape.
  *
  * Config uses a nested layout: generic harness fields at the top level,
- * adapter-specific options under a named key (e.g. `claudeCode`).
+ * adapter-specific options under a named key (e.g. `claudeCode`). Validated
+ * raw shapes are transformed into runtime types by `src/config/transform.ts`.
  */
 
 import { z } from "zod";
@@ -75,6 +76,15 @@ export const ReferenceToolCallSchema = z.object({
   tool_input: z.unknown(),
 });
 
+/** Reference trajectory in suite YAML — array of steps or object with mode + steps. */
+export const ReferenceTrajectorySchema = z.union([
+  z.array(ReferenceToolCallSchema),
+  z.object({
+    tool_name_mode: z.enum(["harness", "bare"]).optional(),
+    steps: z.array(ReferenceToolCallSchema).min(1),
+  }),
+]);
+
 /** A test case. */
 export const TestCaseSchema = z.object({
   id: z.string().min(1),
@@ -82,7 +92,7 @@ export const TestCaseSchema = z.object({
   category: z.string().optional(),
   notes: z.string().optional(),
   expectations: z.array(z.string().min(1)).optional(),
-  reference_trajectory: z.array(ReferenceToolCallSchema).optional(),
+  reference_trajectory: ReferenceTrajectorySchema.optional(),
   human_ratings: z.record(z.string(), z.number()).optional(),
   assertions: z.array(z.unknown()).min(1),
   repetitions: z.number().int().positive().optional(),
@@ -106,6 +116,9 @@ export const SuiteDirectorySchema = z.object({
 });
 
 export type RawTestSuite = z.infer<typeof TestSuiteSchema>;
+/** Raw shape of a directory suite root (`suite.yaml` with optional inline cases). */
 export type RawSuiteDirectory = z.infer<typeof SuiteDirectorySchema>;
+/** Raw shape of one test case before assertion transformation. */
 export type RawTestCase = z.infer<typeof TestCaseSchema>;
+/** Raw shape of one matrix cell before path resolution. */
 export type RawMatrixCell = z.infer<typeof MatrixCellSchema>;

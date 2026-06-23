@@ -1,5 +1,9 @@
 /**
  * Public API for @alis-build/harness-eval.
+ *
+ * Library entry point: types, runner, config loading, assertions, adapters,
+ * grading, reporting, OTel export, and eval-record / interchange builders.
+ * CLI consumers typically use the `harness-eval` binary in `src/cli/bin.ts`.
  */
 
 export * from "./types/index";
@@ -69,9 +73,11 @@ export {
 } from "./eval-record/index";
 export {
   toTrajectory,
-  toProtoInstances,
-  toAgentTrace,
-  enrichRepetitionWithInterchange,
+  toInstancesJsonl,
+  enrichRepetitionWithProtojson,
+  toEvaluationInstance,
+  toTrajectoryInstances,
+  toHarnessMetrics,
 } from "./eval-interchange/index";
 export * from "./metrics/index";
 export {

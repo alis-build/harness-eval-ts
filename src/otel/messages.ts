@@ -1,15 +1,20 @@
 /**
- * Build GenAI semconv message arrays from a TrajectoryView.
+ * Build GenAI semconv message arrays from a {@link TrajectoryView}.
+ *
+ * Message shapes follow OpenTelemetry GenAI semantic conventions for
+ * `gen_ai.input.messages` and `gen_ai.output.messages` span attributes.
  */
 
 import type { AssistantTurn, ToolCall, TrajectoryView } from "../types/trajectory";
 
+/** One message in GenAI semconv format (role + typed parts). */
 export interface GenAiMessage {
   role: string;
   parts: GenAiPart[];
   finish_reason?: string;
 }
 
+/** Discriminated content part within a {@link GenAiMessage}. */
 export type GenAiPart =
   | { type: "text"; content: string }
   | {
@@ -24,6 +29,11 @@ export type GenAiPart =
       result: unknown;
     };
 
+/**
+ * Map harness stop reasons to GenAI semconv finish_reason values.
+ *
+ * Unknown reasons pass through unchanged for forward compatibility.
+ */
 export function mapStopReason(reason: string | null): string | undefined {
   if (!reason) return undefined;
   switch (reason) {
@@ -40,6 +50,7 @@ export function mapStopReason(reason: string | null): string | undefined {
   }
 }
 
+/** Build a tool_call part from a {@link ToolCall}. */
 export function toolCallPart(call: ToolCall): GenAiPart {
   return {
     type: "tool_call",
@@ -49,6 +60,7 @@ export function toolCallPart(call: ToolCall): GenAiPart {
   };
 }
 
+/** Build a tool_call_response part from a {@link ToolCall} result. */
 export function toolResponsePart(call: ToolCall): GenAiPart {
   return {
     type: "tool_call_response",
@@ -57,6 +69,7 @@ export function toolResponsePart(call: ToolCall): GenAiPart {
   };
 }
 
+/** Convert one assistant turn to a GenAI semconv assistant message. */
 export function assistantMessageFromTurn(turn: AssistantTurn): GenAiMessage {
   const parts: GenAiPart[] = [];
   if (turn.text) {
@@ -73,6 +86,7 @@ export function assistantMessageFromTurn(turn: AssistantTurn): GenAiMessage {
   };
 }
 
+/** Aggregate tool results from a turn into a single tool-role message, if any. */
 export function toolResultsMessage(calls: ToolCall[]): GenAiMessage | null {
   const parts = calls
     .filter((c) => c.result !== null)
@@ -109,6 +123,7 @@ export function inputMessagesBeforeTurn(
   return messages;
 }
 
+/** Messages representing model output for the final turn (or synthetic final response). */
 export function finalOutputMessages(view: TrajectoryView): GenAiMessage[] {
   if (view.turns.length === 0) {
     if (!view.finalResponse) return [];

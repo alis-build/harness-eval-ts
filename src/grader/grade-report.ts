@@ -16,6 +16,12 @@ import type {
 import { createLimit } from "../runner/limit";
 import type { CellReport, SuiteReport } from "../runner/types";
 
+/**
+ * Grade every repetition in a {@link SuiteReport} that has expectations.
+ *
+ * Expectations come from inline case fields or an optional sidecar YAML/JSON
+ * map. Runs are concurrent under {@link GradeReportOptions.maxConcurrent}.
+ */
 export async function gradeReport(
   report: SuiteReport,
   options: GradeReportOptions = {},
@@ -171,6 +177,7 @@ export async function gradeReport(
   };
 }
 
+/** Load a suite report JSON file produced by `harness-eval run`. */
 export async function loadSuiteReport(path: string): Promise<SuiteReport> {
   const text = await readFile(path, "utf8");
   return JSON.parse(text) as SuiteReport;

@@ -9,6 +9,11 @@ const GREEN = "\x1b[32m";
 const RED = "\x1b[31m";
 const DIM = "\x1b[2m";
 
+/**
+ * Format a {@link SuiteGradingReport} for terminal output.
+ *
+ * @param color When true, emit ANSI status colors (default for TTY console).
+ */
 export function formatGradingConsole(
   report: SuiteGradingReport,
   color = true,
@@ -69,6 +74,7 @@ export function formatGradingConsole(
   return lines.join("\n").trimEnd();
 }
 
+/** True when every graded rep passed all expectations without grader errors. */
 export function gradingReportPassed(report: SuiteGradingReport): boolean {
   return report.results.every(
     (r) => !r.graderError && r.summary.failed === 0 && r.summary.total > 0,

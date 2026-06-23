@@ -184,9 +184,10 @@ export function trajectoryToOtlp(
   };
 }
 
-/** Alias matching the implementation plan naming. */
+/** Alias for {@link trajectoryToOtlp} — matches implementation plan naming. */
 export const emitOtel = trajectoryToOtlp;
 
+/** Map view success flag to OTLP span status on the root invoke_agent span. */
 function viewStatus(view: TrajectoryView): SpanStatus {
   if (view.success) {
     return { code: StatusCode.OK };
@@ -197,6 +198,13 @@ function viewStatus(view: TrajectoryView): SpanStatus {
   };
 }
 
+/**
+ * Assign synthetic timestamps to chat and tool spans.
+ *
+ * Stream-json does not carry per-turn wall times, so we divide the session
+ * duration evenly across chat/tool slots for OTLP consumers that require
+ * start/end times on every span.
+ */
 function buildSpanTimings(
   view: TrajectoryView,
   startMs: number,
@@ -230,6 +238,11 @@ function buildSpanTimings(
   return timings;
 }
 
+/**
+ * Derive a deterministic 128-bit trace id from the harness session id.
+ *
+ * Uses SHA-256 truncation so the same session always maps to the same trace.
+ */
 export function traceIdFromSession(sessionId: string): string {
   return createHash("sha256")
     .update(`harness-eval:trace:${sessionId}`)
@@ -238,6 +251,9 @@ export function traceIdFromSession(sessionId: string): string {
     .toUpperCase();
 }
 
+/**
+ * Derive a deterministic 64-bit span id from trace id and a logical span key.
+ */
 export function spanIdFromKey(traceId: string, key: string): string {
   return createHash("sha256")
     .update(`${traceId}:span:${key}`)
@@ -246,6 +262,7 @@ export function spanIdFromKey(traceId: string, key: string): string {
     .toUpperCase();
 }
 
+/** Convert milliseconds since epoch to OTLP nanosecond timestamp string. */
 function msToNs(ms: number): string {
   return String(Math.round(ms * 1_000_000));
 }

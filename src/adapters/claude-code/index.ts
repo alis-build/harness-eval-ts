@@ -84,6 +84,7 @@ export async function runClaudeCode(
   }
 }
 
+/** Registered {@link HarnessAdapter} for Claude Code headless runs. */
 export const claudeCodeAdapter: HarnessAdapter<ClaudeCodeAdapterConfig> = {
   id: "claude-code",
   run: runClaudeCode,

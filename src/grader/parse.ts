@@ -9,6 +9,13 @@ import type {
   GraderOutput,
 } from "./types";
 
+/**
+ * Extract assistant text from Claude stdout.
+ *
+ * Handles plain text, single JSON result envelopes, stream-json arrays, and
+ * assistant message objects — the judge subprocess may emit any of these
+ * depending on Claude Code version and flags.
+ */
 export function extractClaudeResponseText(stdout: string): string {
   const trimmed = stdout.trim();
   if (!trimmed) return "";
@@ -37,6 +44,7 @@ export function extractClaudeResponseText(stdout: string): string {
   return trimmed;
 }
 
+/** Walk a stream-json event array and return the final assistant or result text. */
 function extractFromEventArray(events: unknown[]): string | null {
   const result = events.find(
     (e) =>
@@ -65,6 +73,7 @@ function extractFromEventArray(events: unknown[]): string | null {
   return null;
 }
 
+/** Concatenate text blocks from an Anthropic-style assistant message object. */
 function textFromAssistantMessage(message: unknown): string | null {
   if (!message || typeof message !== "object") return null;
   const content = (message as { content?: unknown }).content;
@@ -85,6 +94,12 @@ function textFromAssistantMessage(message: unknown): string | null {
   return texts.length > 0 ? texts.join("\n") : null;
 }
 
+/**
+ * Parse grader JSON from response text.
+ *
+ * Tries the raw string first, then fenced code blocks and brace-delimited
+ * substrings. Returns null when no valid expectations array is found.
+ */
 export function parseGraderJson(text: string): GraderOutput | null {
   const candidates = [text.trim(), extractJsonBlock(text)];
   for (const candidate of candidates) {
@@ -102,6 +117,7 @@ export function parseGraderJson(text: string): GraderOutput | null {
   return null;
 }
 
+/** Raw grader JSON shape before normalization (snake_case from prompt schema). */
 interface RawGraderJson {
   expectations?: Array<{
     text?: string;
@@ -121,6 +137,7 @@ interface RawGraderJson {
   };
 }
 
+/** Extract JSON from markdown fences or the outermost `{...}` substring. */
 function extractJsonBlock(text: string): string | null {
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fence?.[1]) return fence[1].trim();
@@ -133,6 +150,7 @@ function extractJsonBlock(text: string): string | null {
   return null;
 }
 
+/** Map raw grader JSON to runtime {@link GraderOutput} with computed summary. */
 function normalizeGraderJson(raw: RawGraderJson): GraderOutput {
   const expectations: GradedExpectation[] = (raw.expectations ?? []).map(
     (e) => ({

@@ -1,218 +1,116 @@
 /**
- * Envelope projection methods for eval interchange output.
+ * Envelope projection methods for Vertex protojson interchange output.
+ *
+ * Flatten a nested {@link EvalRunEnvelope} into JSONL-friendly rows for:
+ *
+ *   - `trajectory` projection — one {@link EvalDatasetRow} per repetition
+ *   - `instances` projection — one {@link InstancesJsonlRow} per trajectory metric
+ *
+ * Used by `harness-eval envelope --projection trajectory|instances`.
  */
 
-import {
-  buildAgentTrace,
-  interchangeToTabular,
-  latencyInSeconds,
-  predictedTrajectoryFromView,
-  toolCallToTabular,
-} from "./build";
 import type {
-  AgentTrace,
   EvalDatasetRow,
-  InterchangeToolCall,
-  ProtoTrajectoryInstance,
-  TabularToolCall,
-  TrajectoryMetrics,
+  InstancesJsonlRow,
+  TrajectoryInstanceMetricKey,
+  TrajectoryInstancesJson,
 } from "../types/eval-interchange";
 import type {
   EvalCellResult,
   EvalRepetition,
   EvalRunEnvelope,
 } from "../types/eval-record";
-import { computeTrajectoryMetrics } from "../metrics/trajectory";
-import { computeToolCallMetrics } from "../metrics/tool-calls";
+import { trajectoryInstanceMessageType } from "./protojson/trajectory-instances";
 
-function repetitionInterchangeFields(
-  repetition: EvalRepetition,
-): {
-  predicted_trajectory: InterchangeToolCall[];
-  agent_trace?: AgentTrace;
-  latency_in_seconds?: number;
-  failure?: 0 | 1;
-} {
-  if (!repetition.trajectory) {
-    return { predicted_trajectory: [] };
-  }
+/** Trajectory instance keys emitted in stable order for JSONL export. */
+const TRAJECTORY_INSTANCE_KEYS: TrajectoryInstanceMetricKey[] = [
+  "exactMatch",
+  "inOrderMatch",
+  "anyOrderMatch",
+  "precision",
+  "recall",
+  "singleToolUse",
+];
 
-  return {
-    predicted_trajectory: repetition.predicted_trajectory ??
-      predictedTrajectoryFromView(repetition.trajectory),
-    agent_trace: repetition.agent_trace ??
-      buildAgentTrace(repetition.trajectory),
-    latency_in_seconds: repetition.latency_in_seconds ??
-      latencyInSeconds(repetition.trajectory),
-    failure: repetition.failure ?? (repetition.trajectory.success ? 0 : 1),
-  };
-}
-
-function referenceTrajectoryForCell(
-  cell: EvalCellResult,
-): TabularToolCall[] | undefined {
-  return cell.reference_trajectory;
-}
-
+/**
+ * Flatten one repetition into a trajectory dataset row.
+ *
+ * Pulls prompt from the cell, response from evaluationInstance, and falls
+ * back to duration-based latency when enrich did not set latencySeconds.
+ */
 export function repetitionToDatasetRow(
   cell: EvalCellResult,
   repetition: EvalRepetition,
-): EvalDatasetRow | null {
-  const fields = repetitionInterchangeFields(repetition);
-  if (!repetition.trajectory) {
-    return {
-      prompt: cell.prompt,
-      response: undefined,
-      predicted_trajectory: [],
-      reference_trajectory: referenceTrajectoryForCell(cell),
-      latency_in_seconds: repetition.durationMs / 1000,
-      failure: 1,
-      human_ratings: cell.human_ratings,
-    };
-  }
-
+): EvalDatasetRow {
   return {
+    caseId: cell.caseId,
+    repetitionIndex: repetition.repetitionIndex,
     prompt: cell.prompt,
-    response: repetition.trajectory.finalResponse,
-    predicted_trajectory: fields.predicted_trajectory.map(interchangeToTabular),
-    reference_trajectory: referenceTrajectoryForCell(cell),
-    latency_in_seconds: fields.latency_in_seconds ?? repetition.durationMs / 1000,
-    failure: fields.failure ?? 1,
-    human_ratings: cell.human_ratings,
+    response: repetition.evaluationInstance?.response?.text,
+    evaluationInstance: repetition.evaluationInstance,
+    latencySeconds: repetition.latencySeconds ?? repetition.durationMs / 1000,
+    failure: repetition.failure ?? (repetition.trajectory?.success ? 0 : 1),
+    humanRatings: cell.humanRatings,
   };
 }
 
-export function repetitionToProtoInstance(
+/**
+ * Expand one repetition into type-tagged instance rows for EvaluateInstances.
+ *
+ * Returns an empty array when the repetition has no reference trajectory
+ * (and therefore no trajectoryInstances block).
+ */
+export function repetitionToInstanceRows(
   cell: EvalCellResult,
   repetition: EvalRepetition,
-): ProtoTrajectoryInstance | null {
-  const fields = repetitionInterchangeFields(repetition);
-  if (!repetition.trajectory) return null;
+): InstancesJsonlRow[] {
+  if (!repetition.trajectoryInstances) return [];
 
-  const reference = referenceTrajectoryForCell(cell);
-  return {
-    prompt: cell.prompt,
-    response: repetition.trajectory.finalResponse,
-    predicted_trajectory: {
-      tool_calls: fields.predicted_trajectory,
-    },
-    reference_trajectory: reference
-      ? {
-          tool_calls: reference.map((toolCall) => ({
-            tool_name: toolCall.tool_name,
-            tool_input:
-              typeof toolCall.tool_input === "string"
-                ? toolCall.tool_input
-                : JSON.stringify(toolCall.tool_input ?? {}),
-          })),
-        }
-      : undefined,
-  };
-}
+  const rows: InstancesJsonlRow[] = [];
+  for (const key of TRAJECTORY_INSTANCE_KEYS) {
+    const instance = repetition.trajectoryInstances[key];
+    if (!instance) continue;
 
-export function repetitionToAgentTrace(
-  repetition: EvalRepetition,
-): AgentTrace | null {
-  const fields = repetitionInterchangeFields(repetition);
-  return fields.agent_trace ?? null;
-}
-
-export function computeRepetitionMetrics(
-  repetition: EvalRepetition,
-  referenceTrajectory?: TabularToolCall[],
-): {
-  trajectoryMetrics?: TrajectoryMetrics;
-  toolCallMetrics?: ReturnType<typeof computeToolCallMetrics>;
-} {
-  if (!referenceTrajectory?.length) {
-    return {};
+    rows.push({
+      messageType: trajectoryInstanceMessageType(key),
+      caseId: cell.caseId,
+      repetitionIndex: repetition.repetitionIndex,
+      instance,
+    });
   }
 
-  const predicted = repetition.predicted_trajectory ??
-    (repetition.trajectory
-      ? predictedTrajectoryFromView(repetition.trajectory)
-      : []);
-
-  const predictedTabular = predicted.map(interchangeToTabular);
-
-  return {
-    trajectoryMetrics: computeTrajectoryMetrics(
-      predictedTabular,
-      referenceTrajectory,
-    ),
-    toolCallMetrics: computeToolCallMetrics(
-      predictedTabular,
-      referenceTrajectory,
-    ),
-  };
+  return rows;
 }
 
+/**
+ * Trajectory projection — all repetitions in the envelope as dataset rows.
+ */
 export function toTrajectory(envelope: EvalRunEnvelope): EvalDatasetRow[] {
   const rows: EvalDatasetRow[] = [];
   for (const cell of envelope.cells) {
     for (const repetition of cell.repetitions) {
-      const row = repetitionToDatasetRow(cell, repetition);
-      if (row) rows.push(row);
+      rows.push(repetitionToDatasetRow(cell, repetition));
     }
   }
   return rows;
 }
 
-export function toProtoInstances(
-  envelope: EvalRunEnvelope,
-): ProtoTrajectoryInstance[] {
-  const instances: ProtoTrajectoryInstance[] = [];
+/**
+ * Instances projection — all trajectory metric instances as JSONL rows.
+ */
+export function toInstancesJsonl(envelope: EvalRunEnvelope): InstancesJsonlRow[] {
+  const rows: InstancesJsonlRow[] = [];
   for (const cell of envelope.cells) {
     for (const repetition of cell.repetitions) {
-      const instance = repetitionToProtoInstance(cell, repetition);
-      if (instance) instances.push(instance);
+      rows.push(...repetitionToInstanceRows(cell, repetition));
     }
   }
-  return instances;
+  return rows;
 }
 
-export function toAgentTrace(envelope: EvalRunEnvelope): AgentTrace[] {
-  const traces: AgentTrace[] = [];
-  for (const cell of envelope.cells) {
-    for (const repetition of cell.repetitions) {
-      const trace = repetitionToAgentTrace(repetition);
-      if (trace) traces.push(trace);
-    }
-  }
-  return traces;
-}
-
-export function enrichRepetitionWithInterchange(
-  repetition: EvalRepetition,
-  referenceTrajectory?: TabularToolCall[],
-): EvalRepetition {
-  if (!repetition.trajectory) {
-    return repetition;
-  }
-
-  const predicted_trajectory = predictedTrajectoryFromView(repetition.trajectory);
-  const agent_trace = buildAgentTrace(repetition.trajectory);
-  const latency_in_seconds = latencyInSeconds(repetition.trajectory);
-  const failure = repetition.trajectory.success ? 0 : 1;
-
-  const metrics = computeRepetitionMetrics(
-    {
-      ...repetition,
-      predicted_trajectory,
-      agent_trace,
-      latency_in_seconds,
-      failure,
-    },
-    referenceTrajectory,
-  );
-
-  return {
-    ...repetition,
-    predicted_trajectory,
-    agent_trace,
-    latency_in_seconds,
-    failure,
-    trajectoryMetrics: metrics.trajectoryMetrics,
-    toolCallMetrics: metrics.toolCallMetrics,
-  };
+/** Return which trajectory metric keys are populated on an instances block. */
+export function listTrajectoryInstanceKeys(
+  instances: TrajectoryInstancesJson,
+): TrajectoryInstanceMetricKey[] {
+  return TRAJECTORY_INSTANCE_KEYS.filter((key) => instances[key] !== undefined);
 }

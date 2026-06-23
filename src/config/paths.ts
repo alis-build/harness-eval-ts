@@ -1,11 +1,17 @@
 /**
  * Resolve relative paths in suite config against the suite file directory.
+ *
+ * YAML authors write paths relative to the suite file; this module absolutizes
+ * them at load time so the runner and adapters receive filesystem-ready values.
+ * Tilde-prefixed paths and inline JSON blobs (settings starting with `{`) are
+ * left unchanged.
  */
 
 import { isAbsolute, join } from "node:path";
 
 import type { SuiteConfig } from "../adapters/types";
 
+/** Resolve a single path relative to `suiteDir` unless already absolute or `~/`. */
 function resolvePath(value: string, suiteDir: string): string {
   if (isAbsolute(value) || value.startsWith("~/")) {
     return value;
@@ -13,6 +19,7 @@ function resolvePath(value: string, suiteDir: string): string {
   return join(suiteDir, value);
 }
 
+/** Resolve Claude Code-specific path fields within a config block. */
 function resolveClaudeCodePaths(
   block: Record<string, unknown>,
   suiteDir: string,
@@ -38,6 +45,7 @@ function resolveClaudeCodePaths(
   ] as const;
   for (const field of filePathFields) {
     const value = resolved[field];
+    // Inline JSON settings blobs start with `{` and are not filesystem paths.
     if (typeof value === "string" && !value.trim().startsWith("{")) {
       resolved[field] = resolvePath(value, suiteDir);
     }
@@ -92,12 +100,19 @@ export function resolveSuitePaths(
   }
 }
 
+/** Parent directory of a suite or grading config file path. */
 function configFileDir(filePath: string): string {
   return filePath.includes("/") || filePath.includes("\\")
     ? filePath.replace(/[/\\][^/\\]+$/, "")
     : ".";
 }
 
+/**
+ * Heuristically resolve env var values that look like relative file paths.
+ *
+ * Used for grading config where credential or config paths may be expressed
+ * relative to the grading YAML location.
+ */
 function resolveEnvPaths(
   env: Record<string, string>,
   baseDir: string,

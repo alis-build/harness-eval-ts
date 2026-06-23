@@ -17,6 +17,11 @@ import {
 } from "../progress";
 import { writeOtelArtifacts } from "./otel-output";
 
+/**
+ * Execute `harness-eval run`: load suite, run repetitions, format report.
+ *
+ * @returns 0 when all cells pass thresholds, 1 on assertion failure, 2 on usage/load errors.
+ */
 export async function runCommand(args: ParsedArgs): Promise<number> {
   const suitePath = args.positional[0];
   if (!suitePath) {

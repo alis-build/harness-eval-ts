@@ -1,26 +1,35 @@
 /**
  * Tool-call-level metrics operating on prediction/reference tool-call pairs.
  *
- * Metric definitions align with upstream evaluation service tool-call specs.
+ * Implements Vertex-aligned per-call checks: validity, name match, parameter
+ * key match, and full key-value match. Used by trajectory metrics and
+ * available for custom eval pipelines.
+ *
+ * Scores are 0 or 1 per call; {@link computeToolCallMetrics} averages across
+ * aligned index pairs (max length of predicted vs reference).
  */
 
-import type {
-  InterchangeToolCall,
-  TabularToolCall,
-  ToolCallMetrics,
-} from "../types/eval-interchange";
-import { parseToolInput, serializeToolInput } from "../eval-interchange/build";
+import { parseToolInput, type TrajectoryInput, type WireToolCall } from "./trajectory";
+import { serializeToolInput } from "../eval-interchange/normalize";
 
+/** Options for parameter value comparison. */
 export interface ToolCallMetricOptions {
+  /** When true, compare serialized JSON strictly (reserved for future semantics). */
   useStrictStringMatch?: boolean;
 }
 
-type ToolCallInput =
-  | InterchangeToolCall
-  | TabularToolCall
-  | { tool_name: string; tool_input: unknown };
+/** Aggregated tool-call metric scores (each 0..1). */
+export interface ToolCallMetrics {
+  tool_call_valid: number;
+  tool_name_match: number;
+  tool_parameter_key_match: number;
+  tool_parameter_kv_match: number;
+}
 
-function normalizeToolCall(toolCall: ToolCallInput): InterchangeToolCall {
+type ToolCallInput = TrajectoryInput[number];
+
+/** Normalize harness or wire tool call to canonical wire shape for comparison. */
+function normalizeToolCall(toolCall: ToolCallInput): WireToolCall {
   if (typeof toolCall.tool_input === "string") {
     return {
       tool_name: toolCall.tool_name,
@@ -34,7 +43,8 @@ function normalizeToolCall(toolCall: ToolCallInput): InterchangeToolCall {
   };
 }
 
-function parsedArgs(toolCall: InterchangeToolCall): Record<string, unknown> | null {
+/** Parse tool_input JSON to an object map, or null when not a plain object. */
+function parsedArgs(toolCall: WireToolCall): Record<string, unknown> | null {
   const parsed = parseToolInput(toolCall.tool_input);
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
     return null;
@@ -42,6 +52,11 @@ function parsedArgs(toolCall: InterchangeToolCall): Record<string, unknown> | nu
   return parsed as Record<string, unknown>;
 }
 
+/**
+ * Whether a predicted tool call is well-formed (non-empty name, parseable JSON input).
+ *
+ * @returns 1 when valid, 0 otherwise.
+ */
 export function toolCallValid(toolCall: ToolCallInput): number {
   const normalized = normalizeToolCall(toolCall);
   if (!normalized.tool_name.trim()) return 0;
@@ -54,6 +69,11 @@ export function toolCallValid(toolCall: ToolCallInput): number {
   }
 }
 
+/**
+ * Whether predicted and reference tool names match exactly.
+ *
+ * @returns 1 on match, 0 otherwise.
+ */
 export function toolNameMatch(
   predicted: ToolCallInput,
   reference: ToolCallInput,
@@ -63,6 +83,11 @@ export function toolNameMatch(
   return predictedNorm.tool_name === referenceNorm.tool_name ? 1 : 0;
 }
 
+/**
+ * Whether parameter key sets match (same keys, same order after sort).
+ *
+ * Requires matching tool names first. Returns 0 when args are not objects.
+ */
 export function toolParameterKeyMatch(
   predicted: ToolCallInput,
   reference: ToolCallInput,
@@ -82,6 +107,7 @@ export function toolParameterKeyMatch(
     : 0;
 }
 
+/** Deep equality via JSON serialization (handles nested objects in args). */
 function valuesEqual(
   left: unknown,
   right: unknown,
@@ -93,6 +119,12 @@ function valuesEqual(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+/**
+ * Whether all reference parameter key-value pairs match in the predicted call.
+ *
+ * Requires {@link toolParameterKeyMatch} first. Only keys present in reference
+ * are checked (predicted may have extra keys).
+ */
 export function toolParameterKvMatch(
   predicted: ToolCallInput,
   reference: ToolCallInput,
@@ -118,6 +150,13 @@ export function toolParameterKvMatch(
   return 1;
 }
 
+/**
+ * Average tool-call metrics across index-aligned predicted/reference pairs.
+ *
+ * Denominator is `max(predicted.length, reference.length, 1)`. Missing
+ * predicted calls at an index are skipped for pair metrics; validity still
+ * counts when a predicted call exists.
+ */
 export function computeToolCallMetrics(
   predicted: ToolCallInput[],
   reference: ToolCallInput[],

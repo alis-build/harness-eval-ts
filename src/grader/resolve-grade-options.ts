@@ -6,6 +6,7 @@ import type { ClaudeCodeOptions } from "../adapters/claude-code/types";
 import type { GradingConfig } from "../config/grading-loader";
 import type { GradeReportOptions } from "./types";
 
+/** CLI flag overrides for grading (take precedence over grading YAML). */
 export interface GradeCliOverrides {
   model?: string;
   binary?: string;

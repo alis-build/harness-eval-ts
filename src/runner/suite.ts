@@ -1,5 +1,9 @@
 /**
- * Suite-level runner.
+ * Suite-level runner — fans out (case × cell × repetition) tasks with concurrency control.
+ *
+ * Tasks run under a {@link createLimit} pool; results are bucketed by case and
+ * cell label, sorted by repetition index, then aggregated into a
+ * {@link SuiteReport}.
  */
 
 import { getAdapter, getDefaultAdapter } from "../adapters/registry";
@@ -23,12 +27,18 @@ import type {
 
 const DEFAULT_MAX_CONCURRENT = 4;
 
+/** One unit of concurrent work: a single repetition for a (case, cell) pair. */
 interface Task {
   testCase: TestCase;
   cell: MatrixCell;
   repetitionIndex: number;
 }
 
+/**
+ * Execute an entire test suite and return an aggregated report.
+ *
+ * @throws When `suite.matrix` or `suite.cases` is empty.
+ */
 export async function runSuite(
   suite: TestSuite,
   options: RunSuiteOptions = {},
@@ -65,6 +75,7 @@ export async function runSuite(
   onProgress?.({ kind: "suite-start", totalReps: tasks.length });
 
   const buckets = new Map<string, RepetitionResult[]>();
+  // Stable key for grouping reps belonging to the same (case, cell).
   const bucketKey = (caseId: string, cellLabel: string) =>
     `${caseId}::${cellLabel}`;
 

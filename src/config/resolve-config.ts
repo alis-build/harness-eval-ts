@@ -1,5 +1,9 @@
 /**
  * Flatten nested suite config into harness-specific adapter config.
+ *
+ * Suite YAML nests adapter options under keys like `claudeCode`; adapters
+ * expect a flat config object. This module merges layers and flattens per
+ * adapter id.
  */
 
 import { DEFAULT_ADAPTER_ID } from "../adapters/registry";

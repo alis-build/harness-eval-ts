@@ -4,6 +4,11 @@
 
 import type { GraderInput } from "./types";
 
+/**
+ * Build the full grader prompt including eval prompt, transcript, and schema.
+ *
+ * When `systemInstruction` is set it is prepended as a judge-specific prefix.
+ */
 export function buildGraderPrompt(input: GraderInput): string {
   const expectationList = input.expectations
     .map((e, i) => `${i + 1}. ${e}`)

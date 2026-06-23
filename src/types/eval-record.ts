@@ -1,23 +1,14 @@
 /**
  * Cross-harness eval record contract for storage, CI/CD, and external judges.
- *
- * Layering:
- *   - {@link TrajectoryView} — canonical harness session (adapter output)
- *   - {@link EvalRunEnvelope} — full run for DB / pipelines
- *   - Optional artifacts — vendor-specific raw streams, OTLP traces
- *
- * @see docs/eval-record.md
- * @see schemas/eval-run-envelope.schema.json
  */
 
 import type { AdapterDiagnostics } from "../adapters/types";
 import type { GradedExpectation, GradingSummary } from "../grader/types";
 import type {
-  AgentTrace,
-  InterchangeToolCall,
-  TabularToolCall,
-  ToolCallMetrics,
-  TrajectoryMetrics,
+  EvaluationInstanceJson,
+  HarnessMetrics,
+  ProtojsonTrajectory,
+  TrajectoryInstancesJson,
 } from "./eval-interchange";
 import type { AssertionResult } from "./assertions";
 import type { TrajectoryView } from "./trajectory";
@@ -30,21 +21,15 @@ export const TRAJECTORY_SCHEMA_VERSION = "1.0";
 
 /** Link to the suite spec that produced a run. */
 export interface SuiteReference {
-  /** Absolute or repo-relative path to the suite YAML. */
   uri?: string;
-  /** Stable suite identifier when known (e.g. case bundle name). */
   id?: string;
-  /** SHA-256 or similar hash of suite file contents. */
   contentHash?: string;
 }
 
 /** Harness that executed the run. */
 export interface HarnessInfo {
-  /** Adapter id from suite YAML, e.g. `claude-code`. */
   adapter: string;
-  /** harness-eval package version when envelope was built. */
   frameworkVersion?: string;
-  /** Optional harness binary version (e.g. `claude -v`). */
   harnessVersion?: string;
 }
 
@@ -71,9 +56,7 @@ export interface EvalProvenance {
 export interface EvalRunSummary {
   cellsTotal: number;
   cellsPassed: number;
-  /** All cells passed behavioral assertion thresholds. */
   behavioralPass: boolean;
-  /** All graded expectations passed (when outcome layer present). */
   outcomePass?: boolean;
 }
 
@@ -106,49 +89,33 @@ export interface ExternalScore {
 
 /** Optional large or vendor-specific blobs (store by reference in DB when possible). */
 export interface EvalArtifacts {
-  /** Claude Code `stream-json` lines — debug only, not cross-harness. */
   rawStreamEvents?: unknown[];
-  /** URI to OTLP JSON (S3, GCS, etc.). */
   otlpTraceUri?: string;
-  /** Text transcript for judges (`trajectoryToTranscript`). */
   transcript?: string;
 }
 
-/**
- * One harness invocation — the unit external judges and trajectory queries use.
- */
+/** One harness invocation — the unit external judges and trajectory queries use. */
 export interface EvalRepetition {
   repetitionIndex: number;
   durationMs: number;
-
-  /** Normalized harness session. Required when the harness completed with a view. */
   trajectory?: TrajectoryView & { schemaVersion: string };
-
   diagnostics?: Partial<AdapterDiagnostics>;
   assertionResults: AssertionResult[];
-
   outcomeGrades?: OutcomeGrades;
   externalScores?: ExternalScore[];
-
   artifacts?: EvalArtifacts;
 
-  /** Interchange-format predicted tool-call trajectory. */
-  predicted_trajectory?: InterchangeToolCall[];
+  /** Vertex EvaluationInstance protojson wire object. */
+  evaluationInstance?: EvaluationInstanceJson;
 
-  /** Full multi-turn agent trace in interchange format. */
-  agent_trace?: AgentTrace;
+  /** Vertex Trajectory*Instance protojson wire objects keyed by metric. */
+  trajectoryInstances?: TrajectoryInstancesJson;
 
-  /** Session latency in seconds (interchange field). */
-  latency_in_seconds?: number;
+  /** Harness-precomputed trajectory metric scores (camelCase). */
+  harnessMetrics?: HarnessMetrics;
 
-  /** 1 when the harness run failed, 0 on success (interchange field). */
+  latencySeconds?: number;
   failure?: 0 | 1;
-
-  /** Trajectory-level metrics when reference_trajectory is provided. */
-  trajectoryMetrics?: TrajectoryMetrics;
-
-  /** Tool-call-level metrics when reference_trajectory is provided. */
-  toolCallMetrics?: ToolCallMetrics;
 
   error?: {
     message: string;
@@ -175,25 +142,17 @@ export interface EvalCellResult {
   expectations?: string[];
   cellLabel: string;
   axes?: Record<string, string>;
-  /** Reference tool-call trajectory for metric computation. */
-  reference_trajectory?: TabularToolCall[];
-  /** Human ratings keyed by metric name for judge calibration. */
-  human_ratings?: Record<string, number>;
+  /** Reference trajectory in Vertex protojson wire format. */
+  referenceTrajectory?: ProtojsonTrajectory;
+  humanRatings?: Record<string, number>;
   assertionStats: EvalAssertionStat[];
   adapterErrors: number;
-  /** Passed all behavioral assertion thresholds for this cell. */
   behavioralPass: boolean;
-  /** Passed all outcome expectations when graded; omitted if not graded. */
   outcomePass?: boolean;
   repetitions: EvalRepetition[];
 }
 
-/**
- * Top-level document for CI/CD pipelines, APIs, and databases.
- *
- * This is the interchange format your storage layer should target — not
- * {@link import("./stream").StreamEvent} or OTLP traces.
- */
+/** Top-level document for CI/CD pipelines, APIs, and databases. */
 export interface EvalRunEnvelope {
   schemaVersion: typeof EVAL_RUN_SCHEMA_VERSION;
   runId: string;
@@ -207,12 +166,15 @@ export interface EvalRunEnvelope {
 }
 
 export interface BuildEvalRunEnvelopeOptions {
-  /** UUID for this run; generated if omitted. */
+  /** Override envelope runId; defaults to a random UUID. */
   runId?: string;
+  /** Link to the suite YAML that produced the run. */
   suite?: SuiteReference;
+  /** Harness adapter metadata; adapter defaults to `"claude-code"`. */
   harness?: Partial<HarnessInfo>;
+  /** CI, git, and runtime provenance for correlation. */
   provenance?: EvalProvenance;
-  /** Merge outcome grades from `gradeReport()` or compatible structure. */
+  /** Outcome grades to merge from a grader run. */
   grading?: {
     gradedAt?: string;
     sourceReport?: string;
@@ -228,8 +190,8 @@ export interface BuildEvalRunEnvelopeOptions {
     }>;
     judge?: JudgeInfo;
   };
-  /** Include transcript in each repetition's artifacts. Default true. */
+  /** Include text transcript artifact (default true). */
   includeTranscript?: boolean;
-  /** Include raw stream events when adapter provides them. Default false. */
+  /** Include raw stream-json events (default false; debug only). */
   includeRawStreamEvents?: boolean;
 }

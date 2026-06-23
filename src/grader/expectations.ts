@@ -8,6 +8,11 @@ import { parse as parseYaml } from "yaml";
 
 import type { ExpectationsMap } from "./types";
 
+/**
+ * Load expectations sidecar (YAML or JSON).
+ *
+ * File format: `{ "<caseId>": ["expectation 1", ...], ... }`.
+ */
 export async function loadExpectationsMap(path: string): Promise<ExpectationsMap> {
   const text = await readFile(path, "utf8");
   const trimmed = path.trim().toLowerCase();

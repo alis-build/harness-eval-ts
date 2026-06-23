@@ -52,6 +52,14 @@ export interface SpawnedClaude {
 /**
  * Spawn `claude` in headless mode with isolated config and a process-group
  * lifecycle. See {@link SpawnedClaude} for how to consume the result.
+ *
+ * **Kill sequence:** timeout and abort both follow the same two-step path:
+ * `SIGTERM` to the process group, then `SIGKILL` after {@link KILL_GRACE_MS}
+ * if the group is still alive. This avoids leaving MCP/tool subprocesses
+ * running while still giving claude a chance to flush stream-json output.
+ *
+ * @param config - Adapter options; `timeoutMs`, `signal`, and `isolateConfig`
+ *   control lifecycle and config isolation.
  */
 export async function spawnClaude(
   config: ClaudeCodeAdapterConfig,
@@ -87,10 +95,16 @@ export async function spawnClaude(
   });
 
 
+  // `timedOut` is set only by the hard timeout timer, not by abort — callers
+  // use it to distinguish "ran too long" from user cancellation or normal exit.
   let timedOut = false;
   let killEscalation: NodeJS.Timeout | null = null;
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
+  /**
+   * Arm (or re-arm) the SIGKILL fallback. Each SIGTERM attempt gets its own
+   * grace window so a slow shutdown doesn't leave orphaned MCP servers.
+   */
   const scheduleKillEscalation = () => {
     if (killEscalation) clearTimeout(killEscalation);
     killEscalation = setTimeout(
@@ -105,7 +119,7 @@ export async function spawnClaude(
     scheduleKillEscalation();
   }, timeoutMs);
 
-  // External cancellation uses the same kill path.
+  // AbortSignal cancellation mirrors timeout kills but does not flip `timedOut`.
   const onAbort = () => {
     killTree(child, "SIGTERM");
     scheduleKillEscalation();
@@ -130,6 +144,8 @@ export async function spawnClaude(
   });
 
 
+  // Resolve once the process exits or fails to spawn. Guard against double
+  // settlement because both `close` and `error` can fire in edge cases.
   const done = new Promise<{
     exitCode: number | null;
     signal: NodeJS.Signals | null;
@@ -141,6 +157,7 @@ export async function spawnClaude(
     ) => {
       if (settled) return;
       settled = true;
+      // Tear down timers/listeners so a late timeout cannot SIGKILL a reused PID.
       clearTimeout(timeoutTimer);
       if (killEscalation) clearTimeout(killEscalation);
       config.signal?.removeEventListener("abort", onAbort);
@@ -180,22 +197,28 @@ export async function spawnClaude(
  * group is already gone. This catches MCP server subprocesses and tool
  * processes spawned by claude.
  *
- * Why both? On some platforms the process group dies before we get here
- * (the child itself already cleaned up), in which case `kill(-pid)` throws
- * ESRCH. The fallback handles that edge case without leaking zombies in
- * the common case.
+ * **Signal escalation:** callers typically invoke this first with `SIGTERM`,
+ * then again with `SIGKILL` after {@link KILL_GRACE_MS}. The group kill is
+ * essential — a bare `child.kill()` would leave MCP servers running.
+ *
+ * **Platform edge case:** when the group leader exits first, `kill(-pid)`
+ * throws `ESRCH`. The single-PID fallback covers that without failing the
+ * adapter run.
+ *
+ * @param child - Spawned process handle from {@link spawn}.
+ * @param signal - POSIX signal to deliver (`SIGTERM` or `SIGKILL` in practice).
  */
 function killTree(child: ChildProcess, signal: NodeJS.Signals): void {
   if (child.pid === undefined) return;
   try {
-    // Negative PID = process group. Requires the child was spawned with
-    // detached=true (which we do).
+    // Negative PID targets the entire process group (requires detached spawn).
     process.kill(-child.pid, signal);
   } catch {
     try {
+      // Group already reaped — try the leader PID directly.
       child.kill(signal);
     } catch {
-      // Nothing left to kill.
+      // Process fully gone; nothing to do.
     }
   }
 }

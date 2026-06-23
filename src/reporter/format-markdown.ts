@@ -4,6 +4,7 @@
 
 import type { RenderableRow } from "./types";
 
+/** Render renderable rows as a GitHub-flavored markdown report. */
 export function formatMarkdown(rows: RenderableRow[]): string {
   const lines: string[] = ["# Harness Eval Report", ""];
 
@@ -41,6 +42,7 @@ export function formatMarkdown(rows: RenderableRow[]): string {
   return lines.join("\n").trimEnd();
 }
 
+/** Format pass rate for markdown tables, noting when all reps crashed. */
 function formatRate(stat: RenderableRow["stats"][number]): string {
   if (stat.evaluatedCount === 0) {
     return `0/${stat.totalReps} (all reps crashed)`;

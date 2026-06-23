@@ -1,3 +1,11 @@
+/**
+ * Eval record envelope builders — public re-exports.
+ *
+ * Primary entry for converting runner reports into {@link EvalRunEnvelope}
+ * documents. Schema version constants are exported for consumers validating
+ * envelope JSON.
+ */
+
 export {
   buildEvalRunEnvelope,
   buildEvalRunEnvelopeFromFiles,

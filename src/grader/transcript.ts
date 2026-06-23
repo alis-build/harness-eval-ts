@@ -4,8 +4,15 @@
 
 import type { TrajectoryView } from "../types/trajectory";
 
+/** Maximum characters per tool result embedded in grader transcripts. */
 const MAX_RESULT_CHARS = 4000;
 
+/**
+ * Render a {@link TrajectoryView} as markdown for LLM graders.
+ *
+ * Tool results are truncated at {@link MAX_RESULT_CHARS} to keep judge
+ * prompts within reasonable token limits.
+ */
 export function trajectoryToTranscript(
   view: TrajectoryView,
   prompt?: string,
@@ -57,6 +64,7 @@ export function trajectoryToTranscript(
   return lines.join("\n").trimEnd();
 }
 
+/** Format unknown values as JSON for transcript embedding. */
 function formatJson(value: unknown): string {
   try {
     return JSON.stringify(value);
@@ -65,6 +73,7 @@ function formatJson(value: unknown): string {
   }
 }
 
+/** Format a tool result, truncating long string or JSON payloads. */
 function formatResult(result: unknown): string {
   if (typeof result === "string") {
     return truncate(result);
@@ -72,6 +81,7 @@ function formatResult(result: unknown): string {
   return truncate(formatJson(result));
 }
 
+/** Truncate text with ellipsis when exceeding the transcript size budget. */
 function truncate(text: string): string {
   if (text.length <= MAX_RESULT_CHARS) return text;
   return `${text.slice(0, MAX_RESULT_CHARS)}… (truncated)`;

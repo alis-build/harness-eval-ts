@@ -23,12 +23,14 @@ export const JUDGE_CLAUDE_DEFAULTS: ClaudeCodeOptions = {
   noSessionPersistence: true,
 };
 
+/** Merge user-supplied Claude Code options over judge-safe defaults. */
 export function mergeJudgeClaudeOptions(
   claudeCode?: ClaudeCodeOptions,
 ): ClaudeCodeOptions {
   return { ...JUDGE_CLAUDE_DEFAULTS, ...claudeCode };
 }
 
+/** Options for {@link createClaudeGrader} / {@link runClaudeGrader}. */
 export interface ClaudeGraderOptions {
   binary?: string;
   model?: string;
@@ -38,12 +40,18 @@ export interface ClaudeGraderOptions {
   claudeCode?: ClaudeCodeOptions;
 }
 
+/** Factory returning a {@link GraderFn} bound to subprocess options. */
 export function createClaudeGrader(
   options: ClaudeGraderOptions = {},
 ): GraderFn {
   return (input) => runClaudeGrader(input, options);
 }
 
+/**
+ * Spawn Claude as judge, parse JSON response, align with input expectations.
+ *
+ * Unparseable output fails all expectations and sets {@link GraderOutput.error}.
+ */
 export async function runClaudeGrader(
   input: GraderInput,
   options: ClaudeGraderOptions = {},
@@ -110,6 +118,12 @@ export async function runClaudeGrader(
   };
 }
 
+/**
+ * Spawn a child process and collect stdout until exit or timeout.
+ *
+ * Non-zero exit with empty stdout is treated as failure; partial stdout on
+ * non-zero exit is retained (Claude sometimes exits non-zero after emitting JSON).
+ */
 function spawnCollectStdout(
   binary: string,
   args: string[],
@@ -164,6 +178,9 @@ function spawnCollectStdout(
   });
 }
 
+/**
+ * Build subprocess env, stripping CLAUDECODE to avoid nested-session guards.
+ */
 function buildChildEnv(extraEnv?: Record<string, string>): Record<string, string | undefined> {
   const env = { ...process.env, ...extraEnv };
   delete env.CLAUDECODE;

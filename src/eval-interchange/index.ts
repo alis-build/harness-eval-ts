@@ -1,23 +1,33 @@
-export {
-  buildAgentTrace,
-  failureFlag,
-  interchangeToTabular,
-  latencyInSeconds,
-  parseToolInput,
-  predictedTrajectoryFromView,
-  serializeToolInput,
-  tabularToInterchange,
-  toolCallToInterchange,
-  toolCallToTabular,
-} from "./build";
+/**
+ * Public exports for Vertex protojson eval interchange.
+ *
+ * Re-exports normalization, enrichment, protojson builders, and envelope
+ * projection helpers. Import from here rather than deep paths when wiring
+ * interchange into CLI or external integrations.
+ */
 
 export {
-  computeRepetitionMetrics,
-  enrichRepetitionWithInterchange,
-  repetitionToAgentTrace,
+  normalizeReferenceToolName,
+  serializeToolInput,
+  toProtojsonTrajectory,
+} from "./normalize";
+
+export { enrichRepetitionWithProtojson, predictedToolCalls } from "./enrich";
+
+export { toEvaluationInstance } from "./protojson/evaluation-instance";
+export {
+  toHarnessMetrics,
+} from "./protojson/harness-metrics";
+export {
+  toReferenceTrajectory,
+  toTrajectoryInstances,
+  trajectoryInstanceMessageType,
+} from "./protojson/trajectory-instances";
+
+export {
+  listTrajectoryInstanceKeys,
   repetitionToDatasetRow,
-  repetitionToProtoInstance,
-  toAgentTrace,
-  toProtoInstances,
+  repetitionToInstanceRows,
+  toInstancesJsonl,
   toTrajectory,
 } from "./projections";

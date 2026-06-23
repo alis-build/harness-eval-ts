@@ -20,6 +20,7 @@ import { matches as predicateMatches } from "./predicates";
 
 // presence
 
+/** Assert a tool was called with optional cardinality (`times`). */
 export function evaluateCalled(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "called" }>,
@@ -40,6 +41,7 @@ export function evaluateCalled(
   };
 }
 
+/** Assert a tool was never called. */
 export function evaluateNotCalled(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "not_called" }>,
@@ -59,6 +61,7 @@ export function evaluateNotCalled(
   };
 }
 
+/** Assert at least one of the listed tools was called. */
 export function evaluateCalledAnyOf(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "called_any_of" }>,
@@ -80,6 +83,7 @@ export function evaluateCalledAnyOf(
   };
 }
 
+/** Assert every listed tool was called at least once. */
 export function evaluateCalledAllOf(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "called_all_of" }>,
@@ -103,6 +107,7 @@ export function evaluateCalledAllOf(
 
 // ordering
 
+/** Assert `first` tool's earliest turn strictly precedes `then` tool's earliest turn. */
 export function evaluateCalledBefore(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "called_before" }>,
@@ -145,6 +150,11 @@ export function evaluateCalledBefore(
   };
 }
 
+/**
+ * Assert tools appear in order.
+ *
+ * Non-strict mode allows interleaved calls; strict mode requires a contiguous subsequence.
+ */
 export function evaluateSequence(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "sequence" }>,
@@ -215,6 +225,7 @@ export function evaluateSequence(
 
 // arguments
 
+/** Assert at least one call to `tool` had arguments matching the predicate. */
 export function evaluateCalledWith(
   view: TrajectoryView,
   assertion: Extract<Assertion, { type: "called_with" }>,

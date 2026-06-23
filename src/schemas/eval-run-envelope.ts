@@ -7,57 +7,13 @@ import { z } from "zod";
 
 import { EVAL_RUN_SCHEMA_VERSION } from "../types/eval-record";
 import {
-  agentTraceSchema,
-  interchangeToolCallSchema,
-  tabularToolCallSchema,
+  evaluationInstanceJsonSchema,
+  harnessMetricsSchema,
+  protojsonTrajectorySchema,
+  trajectoryInstancesJsonSchema,
 } from "./eval-interchange";
 import { described, field } from "./meta";
 import { toolCallSchema, trajectoryViewExportSchema } from "./trajectory-view";
-
-export const trajectoryMetricsSchema = described(
-  z.object({
-    trajectory_exact_match: field(z.number(), "Exact trajectory match score (0 or 1)."),
-    trajectory_in_order_match: field(
-      z.number(),
-      "In-order trajectory match score (0 or 1).",
-    ),
-    trajectory_any_order_match: field(
-      z.number(),
-      "Any-order trajectory match score (0 or 1).",
-    ),
-    trajectory_precision: field(z.number(), "Trajectory precision (0..1)."),
-    trajectory_recall: field(z.number(), "Trajectory recall (0..1)."),
-    trajectory_single_tool_use: field(
-      z.number(),
-      "Single-tool-use match score (0 or 1).",
-    ),
-  }),
-  {
-    id: "TrajectoryMetrics",
-    title: "TrajectoryMetrics",
-    description: "Trajectory-level metric scores for one repetition.",
-  },
-);
-
-export const toolCallMetricsSchema = described(
-  z.object({
-    tool_call_valid: field(z.number(), "Tool call validity score (0..1)."),
-    tool_name_match: field(z.number(), "Tool name match score (0..1)."),
-    tool_parameter_key_match: field(
-      z.number(),
-      "Tool parameter key match score (0..1).",
-    ),
-    tool_parameter_kv_match: field(
-      z.number(),
-      "Tool parameter key-value match score (0..1).",
-    ),
-  }),
-  {
-    id: "ToolCallMetrics",
-    title: "ToolCallMetrics",
-    description: "Tool-call-level metric scores for one repetition.",
-  },
-);
 
 export const suiteReferenceSchema = described(
   z.object({
@@ -487,29 +443,25 @@ export const evalRepetitionSchema = described(
       evalArtifactsSchema.optional(),
       "Optional transcript, raw stream, or OTLP URI artifacts.",
     ),
-    predicted_trajectory: field(
-      z.array(interchangeToolCallSchema).optional(),
-      "Predicted tool-call trajectory in interchange wire format.",
+    evaluationInstance: field(
+      evaluationInstanceJsonSchema.optional(),
+      "Vertex EvaluationInstance protojson wire object.",
     ),
-    agent_trace: field(
-      agentTraceSchema.optional(),
-      "Full multi-turn agent trace in interchange format.",
+    trajectoryInstances: field(
+      trajectoryInstancesJsonSchema.optional(),
+      "Vertex Trajectory*Instance protojson wire objects keyed by metric.",
     ),
-    latency_in_seconds: field(
+    harnessMetrics: field(
+      harnessMetricsSchema.optional(),
+      "Harness-precomputed trajectory metric scores.",
+    ),
+    latencySeconds: field(
       z.number().optional(),
-      "Session latency in seconds (interchange field).",
+      "Session latency in seconds.",
     ),
     failure: field(
       z.union([z.literal(0), z.literal(1)]).optional(),
       "1 when the harness run failed, 0 on success.",
-    ),
-    trajectoryMetrics: field(
-      trajectoryMetricsSchema.optional(),
-      "Trajectory-level metrics when reference_trajectory is provided.",
-    ),
-    toolCallMetrics: field(
-      toolCallMetricsSchema.optional(),
-      "Tool-call-level metrics when reference_trajectory is provided.",
     ),
     error: field(
       repetitionErrorSchema.optional(),
@@ -534,11 +486,11 @@ export const evalCellResultSchema = described(
       z.array(z.string()).optional(),
       "Natural-language outcome expectations for grading.",
     ),
-    reference_trajectory: field(
-      z.array(tabularToolCallSchema).optional(),
-      "Reference tool-call trajectory for metric computation.",
+    referenceTrajectory: field(
+      protojsonTrajectorySchema.optional(),
+      "Reference trajectory in Vertex protojson wire format.",
     ),
-    human_ratings: field(
+    humanRatings: field(
       z.record(z.string(), z.number()).optional(),
       "Human ratings keyed by metric name for judge calibration.",
     ),

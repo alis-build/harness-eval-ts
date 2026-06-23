@@ -13,8 +13,11 @@ export const SCHEMA_REPO_BRANCH = "main";
 
 const RAW_BASE = `https://raw.githubusercontent.com/alis-build/harness-eval-ts/${SCHEMA_REPO_BRANCH}/schemas`;
 
+/** Canonical `$id` for trajectory-view.schema.json. */
 export const TRAJECTORY_VIEW_SCHEMA_ID = `${RAW_BASE}/trajectory-view.schema.json`;
 
+/** Canonical `$id` for eval-run-envelope.schema.json. */
 export const EVAL_RUN_ENVELOPE_SCHEMA_ID = `${RAW_BASE}/eval-run-envelope.schema.json`;
 
+/** Canonical `$id` for eval-interchange.schema.json. */
 export const EVAL_INTERCHANGE_SCHEMA_ID = `${RAW_BASE}/eval-interchange.schema.json`;

@@ -1,5 +1,8 @@
 /**
  * Load standalone grading YAML for `harness-eval grade`.
+ *
+ * Grading config defines the judge subprocess (model, concurrency, Claude Code
+ * flags) separately from the suite under test.
  */
 
 import { readFile } from "node:fs/promises";
@@ -12,6 +15,7 @@ import { resolveGradingConfigPaths } from "./paths";
 import { GradingConfigSchema, type RawGradingConfig } from "./grading-schema";
 import { ConfigError } from "./transform";
 
+/** Runtime shape of a parsed grading config file. */
 export interface GradingConfig {
   judge: SuiteConfig & {
     adapter?: string;
@@ -20,6 +24,7 @@ export interface GradingConfig {
   };
 }
 
+/** Load grading YAML from disk and resolve relative paths. */
 export async function loadGradingConfig(filePath: string): Promise<GradingConfig> {
   const absolutePath = resolve(filePath);
   let content: string;
@@ -34,6 +39,11 @@ export async function loadGradingConfig(filePath: string): Promise<GradingConfig
   return parseGradingConfig(content, absolutePath);
 }
 
+/**
+ * Parse grading YAML from a string.
+ *
+ * @param sourcePath Optional path for error messages and path resolution.
+ */
 export function parseGradingConfig(
   yamlContent: string,
   sourcePath?: string,
@@ -67,6 +77,7 @@ export function parseGradingConfig(
   return config;
 }
 
+/** Format a zod validation error with optional source file prefix. */
 function formatZodError(err: z.ZodError, sourcePath?: string): string {
   return err.issues
     .map((issue) => {

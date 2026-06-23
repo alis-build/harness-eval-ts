@@ -4,14 +4,17 @@
 
 import type { SuiteReport } from "../runner/types";
 
+/** Output format selector for {@link formatReport}. */
 export type ReportFormat = "console" | "markdown" | "json";
 
+/** Options for suite report formatting. */
 export interface ReporterOptions {
   format: ReportFormat;
   baseline?: SuiteReport;
   color?: boolean;
 }
 
+/** One assertion stat row in the renderable intermediate model. */
 export interface RenderableStat {
   description: string;
   threshold: number;
@@ -25,6 +28,7 @@ export interface RenderableStat {
   delta?: number;
 }
 
+/** One (case, cell) row ready for console or markdown formatters. */
 export interface RenderableRow {
   caseId: string;
   category?: string;
