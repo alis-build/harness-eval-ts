@@ -45,6 +45,7 @@
     "scripts": {
         "generate-schemas": "tsx src/schemas/generate.ts",
         "build": "pnpm run generate-schemas && tsdown",
+        "postbuild": "node scripts/link-local-bin.mjs",
         "prepack": "pnpm run build",
         "prepublishOnly": "pnpm run build",
         "watch": "tsdown --watch",

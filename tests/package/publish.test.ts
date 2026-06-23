@@ -1,4 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -64,5 +66,37 @@ describe("npm publish configuration", () => {
     const pkg = readPackageJson();
     expect(pkg.files).toContain("LICENSE");
     expect(existsSync(join(repoRoot, "LICENSE"))).toBe(true);
+  });
+
+  it("installed tarball exposes harness-eval bin", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "harness-eval-pack-"));
+    let tarball = "";
+    try {
+      const packOutput = execFileSync("npm", ["pack", "--silent"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+        maxBuffer: 10 * 1024 * 1024,
+      }).trim();
+      tarball = packOutput.split("\n").at(-1) ?? "";
+      expect(tarball).toMatch(/\.tgz$/);
+
+      execFileSync("npm", ["init", "-y"], { cwd: tempDir, stdio: "ignore" });
+      execFileSync("npm", ["install", join(repoRoot, tarball), "--ignore-scripts"], {
+        cwd: tempDir,
+        stdio: "ignore",
+      });
+
+      const help = execFileSync(
+        "npx",
+        ["harness-eval", "--help"],
+        { cwd: tempDir, encoding: "utf8" },
+      );
+      expect(help).toMatch(/harness-eval/);
+    } finally {
+      if (tarball) {
+        rmSync(join(repoRoot, tarball), { force: true });
+      }
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });

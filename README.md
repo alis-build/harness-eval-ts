@@ -33,6 +33,8 @@ npx @alis-build/harness-eval run examples/basic.yaml --output report.json
 
 The npm package name is `@alis-build/harness-eval`; the CLI binary is `harness-eval`. With a single bin entry, `npx @alis-build/harness-eval <command>` invokes it directly.
 
+In a git checkout of this repo, npm resolves `npx @alis-build/harness-eval` to the local package (not the registry). Run `pnpm run build` first so `dist/cli/bin.js` exists; the build links `harness-eval` into `node_modules/.bin` for local use.
+
 ### Development (clone & build)
 
 Contributors working from a git checkout:
@@ -40,7 +42,8 @@ Contributors working from a git checkout:
 ```bash
 pnpm install
 pnpm run build
-node dist/cli/bin.js --help
+pnpm exec harness-eval --help
+# or: node dist/cli/bin.js --help
 ```
 
 ---
