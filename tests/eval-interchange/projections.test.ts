@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { buildEvalRunEnvelope } from "../../src/eval-record/build";
 import {
-  toAgentTrace,
-  toProtoInstances,
+  toInstancesJsonl,
   toTrajectory,
 } from "../../src/eval-interchange/projections";
 import type { SuiteReport } from "../../src/runner/types";
 import { makeToolCall, makeView } from "../helpers/factory";
+import {
+  deserializeProtojsonFixture,
+  roundTripProtojsonFixture,
+} from "../helpers/protojson-validation";
 
 function makeReport(): SuiteReport {
   const toolCall = makeToolCall({
@@ -25,9 +28,9 @@ function makeReport(): SuiteReport {
       {
         caseId: "skill-routing",
         prompt: "Find deploy skills",
-        reference_trajectory: [
-          { tool_name: "SearchSkills", tool_input: { query: "deploy" } },
-        ],
+        reference_trajectory: {
+          steps: [{ tool_name: "SearchSkills", tool_input: { query: "deploy" } }],
+        },
         human_ratings: { quality: 4 },
         cell: { label: "sonnet", config: {} },
         repetitions: [
@@ -69,25 +72,25 @@ function makeReport(): SuiteReport {
 }
 
 describe("eval interchange projections", () => {
-  it("stores interchange fields on repetitions during envelope build", () => {
+  it("stores protojson fields on repetitions during envelope build", () => {
     const envelope = buildEvalRunEnvelope(makeReport());
     const rep = envelope.cells[0].repetitions[0];
 
-    expect(rep.predicted_trajectory).toEqual([
-      {
-        tool_name: "SearchSkills",
-        tool_input: JSON.stringify({ query: "deploy" }),
-      },
-    ]);
-    expect(rep.agent_trace?.turns).toHaveLength(1);
-    expect(rep.latency_in_seconds).toBe(1);
+    expect(rep.evaluationInstance).toEqual({
+      prompt: { text: "Find deploy skills" },
+      response: { text: "Found deploy skills" },
+    });
+    expect(rep.trajectoryInstances?.precision?.predictedTrajectory.toolCalls[0]).toEqual({
+      toolName: "SearchSkills",
+      toolInput: JSON.stringify({ query: "deploy" }),
+    });
+    expect(rep.latencySeconds).toBe(1);
     expect(rep.failure).toBe(0);
-    expect(rep.trajectoryMetrics?.trajectory_exact_match).toBe(1);
-    expect(rep.toolCallMetrics?.tool_name_match).toBe(1);
-    expect(envelope.cells[0].reference_trajectory).toEqual([
-      { tool_name: "SearchSkills", tool_input: { query: "deploy" } },
-    ]);
-    expect(envelope.cells[0].human_ratings).toEqual({ quality: 4 });
+    expect(rep.harnessMetrics?.trajectoryExactMatch).toBe(1);
+    expect(envelope.cells[0].referenceTrajectory?.toolCalls[0]?.toolName).toBe(
+      "SearchSkills",
+    );
+    expect(envelope.cells[0].humanRatings).toEqual({ quality: 4 });
   });
 
   it("projects envelope data to trajectory rows", () => {
@@ -95,31 +98,40 @@ describe("eval interchange projections", () => {
     const rows = toTrajectory(envelope);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.predicted_trajectory[0]?.tool_name).toBe("SearchSkills");
-    expect(rows[0]?.predicted_trajectory[0]?.tool_input).toEqual({
-      query: "deploy",
+    expect(rows[0]?.evaluationInstance?.response?.text).toBe("Found deploy skills");
+    expect(rows[0]?.humanRatings).toEqual({ quality: 4 });
+  });
+
+  it("projects envelope data to per-metric instances JSONL rows", () => {
+    const envelope = buildEvalRunEnvelope(makeReport());
+    const rows = toInstancesJsonl(envelope);
+
+    expect(rows.length).toBeGreaterThanOrEqual(6);
+    expect(rows[0]).toMatchObject({
+      caseId: "skill-routing",
+      repetitionIndex: 0,
+      messageType: "TrajectoryExactMatchInstance",
     });
-    expect(rows[0]?.response).toBe("Found deploy skills");
-    expect(rows[0]?.human_ratings).toEqual({ quality: 4 });
+
+    const precision = rows.find((row) => row.messageType === "TrajectoryPrecisionInstance");
+    expect(precision?.instance).toBeDefined();
+    expect(() =>
+      roundTripProtojsonFixture(
+        "TrajectoryPrecisionInstance",
+        precision!.instance as unknown as Record<string, unknown>,
+      ),
+    ).not.toThrow();
   });
 
-  it("projects envelope data to proto instances", () => {
+  it("deserializes built trajectory instances via protobuf types", () => {
     const envelope = buildEvalRunEnvelope(makeReport());
-    const instances = toProtoInstances(envelope);
+    const precision = envelope.cells[0].repetitions[0].trajectoryInstances?.precision;
 
-    expect(instances).toHaveLength(1);
-    expect(instances[0]?.predicted_trajectory.tool_calls[0]?.tool_input).toBe(
-      JSON.stringify({ query: "deploy" }),
-    );
-  });
-
-  it("projects envelope data to agent traces", () => {
-    const envelope = buildEvalRunEnvelope(makeReport());
-    const traces = toAgentTrace(envelope);
-
-    expect(traces).toHaveLength(1);
-    expect(traces[0]?.turns[0]?.events.some((event) =>
-      event.content.parts.some((part) => part.function_call?.name === "SearchSkills"),
-    )).toBe(true);
+    expect(() =>
+      deserializeProtojsonFixture(
+        "TrajectoryPrecisionInstance",
+        precision as unknown as Record<string, unknown>,
+      ),
+    ).not.toThrow();
   });
 });

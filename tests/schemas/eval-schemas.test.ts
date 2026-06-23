@@ -62,7 +62,7 @@ describe("Zod eval schemas", () => {
 
     expect(evalRunEnvelopeSchema.parse(envelope)).toEqual(envelope);
     expect(envelope.schemaVersion).toBe(EVAL_RUN_SCHEMA_VERSION);
-    expect(envelope.cells[0].repetitions[0].predicted_trajectory).toBeDefined();
+    expect(envelope.cells[0].repetitions[0].evaluationInstance).toBeDefined();
   });
 
   it("trajectory export schema matches embedded trajectories", () => {

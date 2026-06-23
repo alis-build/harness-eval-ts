@@ -1,0 +1,8 @@
+{
+  "toolCalls": [
+    {
+      "toolName": "mcp__plugin_alis-build_api__ListLandingZones",
+      "toolInput": "{}"
+    }
+  ]
+}

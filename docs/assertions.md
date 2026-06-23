@@ -266,7 +266,7 @@ expectations:
   - "Each zone includes a status such as ACTIVE or FAILED"
 ```
 
-Judge model, timeout, and env live in a separate **`grading.yaml`** (`judge` block). See [eval-record.md](eval-record.md#grading-config-gradingyaml) and the [README](../README.md) `grade` command (`--config`, `--expectations` sidecar).
+Judge model, timeout, and env live in a separate **`grading.yaml`** (`judge` block). See [suite-config.md — Grading config](suite-config.md#grading-config-gradingyaml) and the [README](../README.md) `grade` command (`--config`, `--expectations` sidecar).
 
 ---
 

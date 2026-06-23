@@ -1,0 +1,26 @@
+{
+  "predictedTrajectory": {
+    "toolCalls": [
+      {
+        "toolName": "Read",
+        "toolInput": "{\"file_path\":\"/tmp/MEMORY.md\"}"
+      },
+      {
+        "toolName": "Skill",
+        "toolInput": "{\"skill\":\"alis-build:build-it\",\"args\":\"list landing zones\"}"
+      },
+      {
+        "toolName": "mcp__plugin_alis-build_api__ListLandingZones",
+        "toolInput": "{}"
+      }
+    ]
+  },
+  "referenceTrajectory": {
+    "toolCalls": [
+      {
+        "toolName": "mcp__plugin_alis-build_api__ListLandingZones",
+        "toolInput": "{}"
+      }
+    ]
+  }
+}

@@ -1,3 +1,10 @@
+/**
+ * Test factories for {@link TrajectoryView} and {@link ToolCall} objects.
+ *
+ * Provides sensible defaults so tests can override only the fields they care
+ * about. Used by mock adapters and assertion/grader tests.
+ */
+
 import type {
   SessionMeta,
   ToolCall,
@@ -22,6 +29,11 @@ const defaultUsage: UsageSummary = {
   numTurns: 2,
 };
 
+/**
+ * Build a tool call with defaults for namespace, callId, and turn indices.
+ *
+ * @param overrides - Must include `name`; other fields default when omitted.
+ */
 export function makeToolCall(
   overrides: Partial<ToolCall> & Pick<ToolCall, "name">,
 ): ToolCall {
@@ -38,6 +50,11 @@ export function makeToolCall(
   };
 }
 
+/**
+ * Build a minimal successful {@link TrajectoryView} for tests.
+ *
+ * @param overrides - Partial view fields; `toolCalls` replaces the default empty list.
+ */
 export function makeView(
   overrides: Partial<TrajectoryView> & { toolCalls?: ToolCall[] } = {},
 ): TrajectoryView {

@@ -1,5 +1,7 @@
 # Grading config for outcome judges (`harness-eval grade`).
 #
+# Field reference: docs/suite-config.md#grading-config-gradingyaml
+#
 # Use with any report that includes expectations (copied from the suite at run time).
 # Built-in judge defaults (maxTurns: 1, bare, disableSlashCommands,
 # noSessionPersistence) apply unless overridden under judge.claudeCode.

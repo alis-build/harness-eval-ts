@@ -383,10 +383,10 @@
         "expectations": {
           "$ref": "#/$defs/__schema55"
         },
-        "reference_trajectory": {
+        "referenceTrajectory": {
           "$ref": "#/$defs/__schema57"
         },
-        "human_ratings": {
+        "humanRatings": {
           "$ref": "#/$defs/__schema61"
         },
         "cellLabel": {
@@ -459,39 +459,55 @@
       }
     },
     "__schema57": {
-      "description": "Reference tool-call trajectory for metric computation.",
-      "$ref": "#/$defs/__schema58"
+      "description": "Reference trajectory in Vertex protojson wire format.",
+      "$ref": "#/$defs/ProtojsonTrajectory"
+    },
+    "ProtojsonTrajectory": {
+      "type": "object",
+      "properties": {
+        "toolCalls": {
+          "$ref": "#/$defs/__schema58"
+        }
+      },
+      "required": [
+        "toolCalls"
+      ],
+      "additionalProperties": false,
+      "title": "ProtojsonTrajectory",
+      "description": "Vertex Trajectory message wire format."
     },
     "__schema58": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/TabularToolCall"
-      }
+        "$ref": "#/$defs/ProtojsonToolCall"
+      },
+      "description": "Ordered tool calls in the trajectory."
     },
-    "TabularToolCall": {
+    "ProtojsonToolCall": {
       "type": "object",
       "properties": {
-        "tool_name": {
+        "toolName": {
           "$ref": "#/$defs/__schema59"
         },
-        "tool_input": {
+        "toolInput": {
           "$ref": "#/$defs/__schema60"
         }
       },
       "required": [
-        "tool_name",
-        "tool_input"
+        "toolName",
+        "toolInput"
       ],
       "additionalProperties": false,
-      "title": "TabularToolCall",
-      "description": "Tool call with structured tool_input for JSONL/tabular export."
+      "title": "ProtojsonToolCall",
+      "description": "Tool call in Vertex EvaluationService wire format."
     },
     "__schema59": {
       "type": "string",
       "description": "Tool name as emitted by the agent."
     },
     "__schema60": {
-      "description": "Tool arguments as a structured object for tabular consumption."
+      "type": "string",
+      "description": "JSON-serialized tool arguments (Vertex wire format)."
     },
     "__schema61": {
       "description": "Human ratings keyed by metric name for judge calibration.",
@@ -647,26 +663,23 @@
         "artifacts": {
           "$ref": "#/$defs/__schema181"
         },
-        "predicted_trajectory": {
+        "evaluationInstance": {
           "$ref": "#/$defs/__schema188"
         },
-        "agent_trace": {
-          "$ref": "#/$defs/__schema192"
+        "trajectoryInstances": {
+          "$ref": "#/$defs/__schema194"
         },
-        "latency_in_seconds": {
-          "$ref": "#/$defs/__schema226"
+        "harnessMetrics": {
+          "$ref": "#/$defs/__schema204"
+        },
+        "latencySeconds": {
+          "$ref": "#/$defs/__schema211"
         },
         "failure": {
-          "$ref": "#/$defs/__schema228"
-        },
-        "trajectoryMetrics": {
-          "$ref": "#/$defs/__schema230"
-        },
-        "toolCallMetrics": {
-          "$ref": "#/$defs/__schema237"
+          "$ref": "#/$defs/__schema213"
         },
         "error": {
-          "$ref": "#/$defs/__schema242"
+          "$ref": "#/$defs/__schema215"
         }
       },
       "required": [
@@ -1674,375 +1687,227 @@
       "type": "string"
     },
     "__schema188": {
-      "description": "Predicted tool-call trajectory in interchange wire format.",
-      "$ref": "#/$defs/__schema189"
+      "description": "Vertex EvaluationInstance protojson wire object.",
+      "$ref": "#/$defs/EvaluationInstanceJson"
+    },
+    "EvaluationInstanceJson": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "$ref": "#/$defs/__schema189"
+        },
+        "response": {
+          "$ref": "#/$defs/__schema192"
+        },
+        "reference": {
+          "$ref": "#/$defs/__schema193"
+        }
+      },
+      "additionalProperties": false,
+      "title": "EvaluationInstanceJson",
+      "description": "Vertex EvaluationInstance wire format (agentEvalData omitted in v1)."
     },
     "__schema189": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/InterchangeToolCall"
-      }
+      "description": "Eval prompt.",
+      "$ref": "#/$defs/InstanceData"
     },
-    "InterchangeToolCall": {
+    "InstanceData": {
       "type": "object",
       "properties": {
-        "tool_name": {
+        "text": {
           "$ref": "#/$defs/__schema190"
-        },
-        "tool_input": {
-          "$ref": "#/$defs/__schema191"
         }
       },
-      "required": [
-        "tool_name",
-        "tool_input"
-      ],
       "additionalProperties": false,
-      "title": "InterchangeToolCall",
-      "description": "Tool call in interchange wire format."
+      "title": "InstanceData",
+      "description": "EvaluationInstance prompt/response/reference text wrapper."
     },
     "__schema190": {
-      "type": "string",
-      "description": "Tool name as emitted by the agent."
+      "description": "Plain text instance data.",
+      "$ref": "#/$defs/__schema191"
     },
     "__schema191": {
-      "type": "string",
-      "description": "JSON-serialized tool arguments (wire format)."
+      "type": "string"
     },
     "__schema192": {
-      "description": "Full multi-turn agent trace in interchange format.",
-      "$ref": "#/$defs/AgentTrace"
-    },
-    "AgentTrace": {
-      "type": "object",
-      "properties": {
-        "agents": {
-          "$ref": "#/$defs/__schema193"
-        },
-        "turns": {
-          "$ref": "#/$defs/__schema206"
-        }
-      },
-      "required": [
-        "agents",
-        "turns"
-      ],
-      "additionalProperties": false,
-      "title": "AgentTrace",
-      "description": "Full multi-turn agent execution trace."
+      "description": "Final agent response.",
+      "$ref": "#/$defs/InstanceData"
     },
     "__schema193": {
-      "type": "object",
-      "propertyNames": {
-        "$ref": "#/$defs/__schema194"
-      },
-      "additionalProperties": {
-        "$ref": "#/$defs/AgentConfig"
-      },
-      "description": "Agent configurations keyed by agent id."
+      "description": "Reference answer text.",
+      "$ref": "#/$defs/InstanceData"
     },
     "__schema194": {
-      "type": "string"
+      "description": "Vertex Trajectory*Instance protojson wire objects keyed by metric.",
+      "$ref": "#/$defs/TrajectoryInstancesJson"
     },
-    "AgentConfig": {
+    "TrajectoryInstancesJson": {
       "type": "object",
       "properties": {
-        "agent_id": {
+        "exactMatch": {
           "$ref": "#/$defs/__schema195"
         },
-        "agent_type": {
-          "$ref": "#/$defs/__schema196"
-        },
-        "description": {
+        "inOrderMatch": {
           "$ref": "#/$defs/__schema198"
         },
-        "instruction": {
+        "anyOrderMatch": {
+          "$ref": "#/$defs/__schema199"
+        },
+        "precision": {
           "$ref": "#/$defs/__schema200"
         },
-        "tools": {
-          "$ref": "#/$defs/__schema202"
+        "recall": {
+          "$ref": "#/$defs/__schema201"
         },
-        "sub_agents": {
-          "$ref": "#/$defs/__schema204"
+        "singleToolUse": {
+          "$ref": "#/$defs/__schema202"
+        }
+      },
+      "additionalProperties": false,
+      "title": "TrajectoryInstancesJson",
+      "description": "Vertex Trajectory*Instance messages keyed by metric."
+    },
+    "__schema195": {
+      "description": "Exact match instance.",
+      "$ref": "#/$defs/TrajectoryPairInstanceJson"
+    },
+    "TrajectoryPairInstanceJson": {
+      "type": "object",
+      "properties": {
+        "predictedTrajectory": {
+          "$ref": "#/$defs/__schema196"
+        },
+        "referenceTrajectory": {
+          "$ref": "#/$defs/__schema197"
         }
       },
       "required": [
-        "agent_id"
+        "predictedTrajectory",
+        "referenceTrajectory"
       ],
       "additionalProperties": false,
-      "title": "AgentConfig",
-      "description": "Static configuration for one agent in a trace."
-    },
-    "__schema195": {
-      "type": "string",
-      "description": "Stable agent identifier."
+      "title": "TrajectoryPairInstanceJson",
+      "description": "Shared shape for Trajectory*Match/Precision/Recall instances."
     },
     "__schema196": {
-      "description": "Agent type or role.",
-      "$ref": "#/$defs/__schema197"
+      "description": "Predicted tool-call trajectory.",
+      "$ref": "#/$defs/ProtojsonTrajectory"
     },
     "__schema197": {
-      "type": "string"
+      "description": "Reference tool-call trajectory.",
+      "$ref": "#/$defs/ProtojsonTrajectory"
     },
     "__schema198": {
-      "description": "Human-readable agent description.",
-      "$ref": "#/$defs/__schema199"
+      "description": "In-order match instance.",
+      "$ref": "#/$defs/TrajectoryPairInstanceJson"
     },
     "__schema199": {
-      "type": "string"
+      "description": "Any-order match instance.",
+      "$ref": "#/$defs/TrajectoryPairInstanceJson"
     },
     "__schema200": {
-      "description": "System instruction for the agent.",
-      "$ref": "#/$defs/__schema201"
+      "description": "Precision instance.",
+      "$ref": "#/$defs/TrajectoryPairInstanceJson"
     },
     "__schema201": {
-      "type": "string"
+      "description": "Recall instance.",
+      "$ref": "#/$defs/TrajectoryPairInstanceJson"
     },
     "__schema202": {
-      "description": "Tools available to this agent.",
-      "$ref": "#/$defs/__schema203"
+      "description": "Single tool use instance.",
+      "$ref": "#/$defs/TrajectorySingleToolUseInstanceJson"
     },
-    "__schema203": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Tool name."
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "additionalProperties": false
-      }
-    },
-    "__schema204": {
-      "description": "Sub-agent identifiers when using multi-agent setups.",
-      "$ref": "#/$defs/__schema205"
-    },
-    "__schema205": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "__schema206": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/ConversationTurn"
-      },
-      "description": "Chronological conversation turns."
-    },
-    "ConversationTurn": {
+    "TrajectorySingleToolUseInstanceJson": {
       "type": "object",
       "properties": {
-        "turn_index": {
+        "predictedTrajectory": {
+          "$ref": "#/$defs/__schema203"
+        }
+      },
+      "required": [
+        "predictedTrajectory"
+      ],
+      "additionalProperties": false,
+      "title": "TrajectorySingleToolUseInstanceJson",
+      "description": "Vertex TrajectorySingleToolUseInstance wire format."
+    },
+    "__schema203": {
+      "description": "Predicted tool-call trajectory.",
+      "$ref": "#/$defs/ProtojsonTrajectory"
+    },
+    "__schema204": {
+      "$ref": "#/$defs/HarnessMetrics"
+    },
+    "HarnessMetrics": {
+      "type": "object",
+      "properties": {
+        "trajectoryExactMatch": {
+          "$ref": "#/$defs/__schema205"
+        },
+        "trajectoryInOrderMatch": {
+          "$ref": "#/$defs/__schema206"
+        },
+        "trajectoryAnyOrderMatch": {
           "$ref": "#/$defs/__schema207"
         },
-        "turn_id": {
+        "trajectoryPrecision": {
           "$ref": "#/$defs/__schema208"
         },
-        "events": {
+        "trajectoryRecall": {
+          "$ref": "#/$defs/__schema209"
+        },
+        "trajectorySingleToolUse": {
           "$ref": "#/$defs/__schema210"
         }
       },
       "required": [
-        "turn_index",
-        "events"
+        "trajectoryExactMatch",
+        "trajectoryInOrderMatch",
+        "trajectoryAnyOrderMatch",
+        "trajectoryPrecision",
+        "trajectoryRecall",
+        "trajectorySingleToolUse"
       ],
       "additionalProperties": false,
-      "title": "ConversationTurn",
-      "description": "One turn in a multi-turn agent conversation."
+      "title": "HarnessMetrics",
+      "description": "Harness-precomputed trajectory metric scores."
+    },
+    "__schema205": {
+      "type": "number",
+      "description": "Exact trajectory match score (0 or 1)."
+    },
+    "__schema206": {
+      "type": "number",
+      "description": "In-order trajectory match score (0 or 1)."
     },
     "__schema207": {
-      "type": "integer",
-      "minimum": -9007199254740991,
-      "maximum": 9007199254740991,
-      "description": "Zero-based turn index."
+      "type": "number",
+      "description": "Any-order trajectory match score (0 or 1)."
     },
     "__schema208": {
-      "description": "Optional stable turn identifier.",
-      "$ref": "#/$defs/__schema209"
+      "type": "number",
+      "description": "Trajectory precision (0..1)."
     },
     "__schema209": {
-      "type": "string"
+      "type": "number",
+      "description": "Trajectory recall (0..1)."
     },
     "__schema210": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/AgentEvent"
-      },
-      "description": "Events in chronological order."
-    },
-    "AgentEvent": {
-      "type": "object",
-      "properties": {
-        "author": {
-          "$ref": "#/$defs/__schema211"
-        },
-        "content": {
-          "$ref": "#/$defs/__schema212"
-        },
-        "event_time": {
-          "$ref": "#/$defs/__schema220"
-        },
-        "state_delta": {
-          "$ref": "#/$defs/__schema222"
-        },
-        "active_tools": {
-          "$ref": "#/$defs/__schema224"
-        }
-      },
-      "required": [
-        "author",
-        "content"
-      ],
-      "additionalProperties": false,
-      "title": "AgentEvent",
-      "description": "One event in a multi-turn agent trace."
+      "type": "number",
+      "description": "Single-tool-use match score (0 or 1)."
     },
     "__schema211": {
-      "type": "string",
-      "description": "Agent id or user identifier for this event."
+      "description": "Session latency in seconds.",
+      "$ref": "#/$defs/__schema212"
     },
     "__schema212": {
-      "type": "object",
-      "properties": {
-        "parts": {
-          "$ref": "#/$defs/__schema213"
-        }
-      },
-      "required": [
-        "parts"
-      ],
-      "additionalProperties": false,
-      "description": "Structured event content."
-    },
-    "__schema213": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/ContentPart"
-      },
-      "description": "Content parts for this event."
-    },
-    "ContentPart": {
-      "type": "object",
-      "properties": {
-        "text": {
-          "$ref": "#/$defs/__schema214"
-        },
-        "function_call": {
-          "$ref": "#/$defs/__schema216"
-        },
-        "function_response": {
-          "$ref": "#/$defs/__schema218"
-        }
-      },
-      "additionalProperties": false,
-      "title": "ContentPart",
-      "description": "One part of agent event content (text, function_call, or function_response)."
-    },
-    "__schema214": {
-      "description": "Plain text content.",
-      "$ref": "#/$defs/__schema215"
-    },
-    "__schema215": {
-      "type": "string"
-    },
-    "__schema216": {
-      "description": "Function call emitted by the agent.",
-      "$ref": "#/$defs/__schema217"
-    },
-    "__schema217": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Function or tool name."
-        },
-        "args": {
-          "description": "Function arguments."
-        }
-      },
-      "required": [
-        "name",
-        "args"
-      ],
-      "additionalProperties": false
-    },
-    "__schema218": {
-      "description": "Function response from tool execution.",
-      "$ref": "#/$defs/__schema219"
-    },
-    "__schema219": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Function or tool name."
-        },
-        "response": {
-          "description": "Function result payload."
-        }
-      },
-      "required": [
-        "name",
-        "response"
-      ],
-      "additionalProperties": false
-    },
-    "__schema220": {
-      "description": "ISO 8601 timestamp when the event occurred.",
-      "$ref": "#/$defs/__schema221"
-    },
-    "__schema221": {
-      "type": "string"
-    },
-    "__schema222": {
-      "description": "Session state changes associated with this event.",
-      "$ref": "#/$defs/__schema223"
-    },
-    "__schema223": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
-    },
-    "__schema224": {
-      "description": "Tools available to the agent at event time.",
-      "$ref": "#/$defs/__schema225"
-    },
-    "__schema225": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Tool name."
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "additionalProperties": false
-      }
-    },
-    "__schema226": {
-      "description": "Session latency in seconds (interchange field).",
-      "$ref": "#/$defs/__schema227"
-    },
-    "__schema227": {
       "type": "number"
     },
-    "__schema228": {
+    "__schema213": {
       "description": "1 when the harness run failed, 0 on success.",
-      "$ref": "#/$defs/__schema229"
+      "$ref": "#/$defs/__schema214"
     },
-    "__schema229": {
+    "__schema214": {
       "anyOf": [
         {
           "type": "number",
@@ -2054,115 +1919,7 @@
         }
       ]
     },
-    "__schema230": {
-      "description": "Trajectory-level metrics when reference_trajectory is provided.",
-      "$ref": "#/$defs/TrajectoryMetrics"
-    },
-    "TrajectoryMetrics": {
-      "type": "object",
-      "properties": {
-        "trajectory_exact_match": {
-          "$ref": "#/$defs/__schema231"
-        },
-        "trajectory_in_order_match": {
-          "$ref": "#/$defs/__schema232"
-        },
-        "trajectory_any_order_match": {
-          "$ref": "#/$defs/__schema233"
-        },
-        "trajectory_precision": {
-          "$ref": "#/$defs/__schema234"
-        },
-        "trajectory_recall": {
-          "$ref": "#/$defs/__schema235"
-        },
-        "trajectory_single_tool_use": {
-          "$ref": "#/$defs/__schema236"
-        }
-      },
-      "required": [
-        "trajectory_exact_match",
-        "trajectory_in_order_match",
-        "trajectory_any_order_match",
-        "trajectory_precision",
-        "trajectory_recall",
-        "trajectory_single_tool_use"
-      ],
-      "additionalProperties": false,
-      "title": "TrajectoryMetrics",
-      "description": "Trajectory-level metric scores for one repetition."
-    },
-    "__schema231": {
-      "type": "number",
-      "description": "Exact trajectory match score (0 or 1)."
-    },
-    "__schema232": {
-      "type": "number",
-      "description": "In-order trajectory match score (0 or 1)."
-    },
-    "__schema233": {
-      "type": "number",
-      "description": "Any-order trajectory match score (0 or 1)."
-    },
-    "__schema234": {
-      "type": "number",
-      "description": "Trajectory precision (0..1)."
-    },
-    "__schema235": {
-      "type": "number",
-      "description": "Trajectory recall (0..1)."
-    },
-    "__schema236": {
-      "type": "number",
-      "description": "Single-tool-use match score (0 or 1)."
-    },
-    "__schema237": {
-      "description": "Tool-call-level metrics when reference_trajectory is provided.",
-      "$ref": "#/$defs/ToolCallMetrics"
-    },
-    "ToolCallMetrics": {
-      "type": "object",
-      "properties": {
-        "tool_call_valid": {
-          "$ref": "#/$defs/__schema238"
-        },
-        "tool_name_match": {
-          "$ref": "#/$defs/__schema239"
-        },
-        "tool_parameter_key_match": {
-          "$ref": "#/$defs/__schema240"
-        },
-        "tool_parameter_kv_match": {
-          "$ref": "#/$defs/__schema241"
-        }
-      },
-      "required": [
-        "tool_call_valid",
-        "tool_name_match",
-        "tool_parameter_key_match",
-        "tool_parameter_kv_match"
-      ],
-      "additionalProperties": false,
-      "title": "ToolCallMetrics",
-      "description": "Tool-call-level metric scores for one repetition."
-    },
-    "__schema238": {
-      "type": "number",
-      "description": "Tool call validity score (0..1)."
-    },
-    "__schema239": {
-      "type": "number",
-      "description": "Tool name match score (0..1)."
-    },
-    "__schema240": {
-      "type": "number",
-      "description": "Tool parameter key match score (0..1)."
-    },
-    "__schema241": {
-      "type": "number",
-      "description": "Tool parameter key-value match score (0..1)."
-    },
-    "__schema242": {
+    "__schema215": {
       "description": "Present when the harness failed without producing a trajectory.",
       "$ref": "#/$defs/RepetitionError"
     },
@@ -2170,10 +1927,10 @@
       "type": "object",
       "properties": {
         "message": {
-          "$ref": "#/$defs/__schema243"
+          "$ref": "#/$defs/__schema216"
         },
         "diagnostics": {
-          "$ref": "#/$defs/__schema244"
+          "$ref": "#/$defs/__schema217"
         }
       },
       "required": [
@@ -2183,11 +1940,11 @@
       "title": "RepetitionError",
       "description": "Harness failure for one repetition without a usable TrajectoryView."
     },
-    "__schema243": {
+    "__schema216": {
       "type": "string",
       "description": "Harness failure message for this repetition."
     },
-    "__schema244": {
+    "__schema217": {
       "description": "Adapter diagnostics when the harness failed before producing a trajectory.",
       "$ref": "#/$defs/AdapterDiagnostics"
     }

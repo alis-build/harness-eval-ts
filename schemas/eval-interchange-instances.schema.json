@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/alis-build/harness-eval-ts/main/schemas/eval-interchange.schema.json#InstancesJsonlRow",
+  "title": "InstancesJsonlRow",
+  "description": "Type-tagged JSONL row for Vertex EvaluateInstances batching.",
+  "type": "object",
+  "properties": {
+    "messageType": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "caseId": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "repetitionIndex": {
+      "$ref": "#/$defs/__schema2"
+    },
+    "instance": {
+      "$ref": "#/$defs/__schema3"
+    }
+  },
+  "required": [
+    "messageType",
+    "caseId",
+    "repetitionIndex",
+    "instance"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "description": "Vertex protobuf message type name."
+    },
+    "__schema1": {
+      "type": "string",
+      "description": "Test case id."
+    },
+    "__schema2": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991,
+      "description": "Repetition index."
+    },
+    "__schema3": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TrajectoryPairInstanceJson"
+        },
+        {
+          "$ref": "#/$defs/TrajectorySingleToolUseInstanceJson"
+        },
+        {
+          "$ref": "#/$defs/EvaluationInstanceJson"
+        }
+      ],
+      "description": "Protojson instance payload."
+    },
+    "TrajectoryPairInstanceJson": {
+      "type": "object",
+      "properties": {
+        "predictedTrajectory": {
+          "$ref": "#/$defs/__schema4"
+        },
+        "referenceTrajectory": {
+          "$ref": "#/$defs/__schema8"
+        }
+      },
+      "required": [
+        "predictedTrajectory",
+        "referenceTrajectory"
+      ],
+      "additionalProperties": false,
+      "title": "TrajectoryPairInstanceJson",
+      "description": "Shared shape for Trajectory*Match/Precision/Recall instances."
+    },
+    "__schema4": {
+      "description": "Predicted tool-call trajectory.",
+      "$ref": "#/$defs/ProtojsonTrajectory"
+    },
+    "__schema5": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ProtojsonToolCall"
+      },
+      "description": "Ordered tool calls in the trajectory."
+    },
+    "ProtojsonToolCall": {
+      "type": "object",
+      "properties": {
+        "toolName": {
+          "$ref": "#/$defs/__schema6"
+        },
+        "toolInput": {
+          "$ref": "#/$defs/__schema7"
+        }
+      },
+      "required": [
+        "toolName",
+        "toolInput"
+      ],
+      "additionalProperties": false,
+      "title": "ProtojsonToolCall",
+      "description": "Tool call in Vertex EvaluationService wire format."
+    },
+    "__schema6": {
+      "type": "string",
+      "description": "Tool name as emitted by the agent."
+    },
+    "__schema7": {
+      "type": "string",
+      "description": "JSON-serialized tool arguments (Vertex wire format)."
+    },
+    "ProtojsonTrajectory": {
+      "type": "object",
+      "properties": {
+        "toolCalls": {
+          "$ref": "#/$defs/__schema5"
+        }
+      },
+      "required": [
+        "toolCalls"
+      ],
+      "additionalProperties": false,
+      "title": "ProtojsonTrajectory",
+      "description": "Vertex Trajectory message wire format."
+    },
+    "__schema8": {
+      "description": "Reference tool-call trajectory.",
+      "$ref": "#/$defs/ProtojsonTrajectory"
+    },
+    "TrajectorySingleToolUseInstanceJson": {
+      "type": "object",
+      "properties": {
+        "predictedTrajectory": {
+          "$ref": "#/$defs/__schema9"
+        }
+      },
+      "required": [
+        "predictedTrajectory"
+      ],
+      "additionalProperties": false,
+      "title": "TrajectorySingleToolUseInstanceJson",
+      "description": "Vertex TrajectorySingleToolUseInstance wire format."
+    },
+    "__schema9": {
+      "description": "Predicted tool-call trajectory.",
+      "$ref": "#/$defs/ProtojsonTrajectory"
+    },
+    "EvaluationInstanceJson": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "$ref": "#/$defs/__schema10"
+        },
+        "response": {
+          "$ref": "#/$defs/__schema13"
+        },
+        "reference": {
+          "$ref": "#/$defs/__schema14"
+        }
+      },
+      "additionalProperties": false,
+      "title": "EvaluationInstanceJson",
+      "description": "Vertex EvaluationInstance wire format (agentEvalData omitted in v1)."
+    },
+    "__schema10": {
+      "description": "Eval prompt.",
+      "$ref": "#/$defs/InstanceData"
+    },
+    "InstanceData": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "$ref": "#/$defs/__schema11"
+        }
+      },
+      "additionalProperties": false,
+      "title": "InstanceData",
+      "description": "EvaluationInstance prompt/response/reference text wrapper."
+    },
+    "__schema11": {
+      "description": "Plain text instance data.",
+      "$ref": "#/$defs/__schema12"
+    },
+    "__schema12": {
+      "type": "string"
+    },
+    "__schema13": {
+      "description": "Final agent response.",
+      "$ref": "#/$defs/InstanceData"
+    },
+    "__schema14": {
+      "description": "Reference answer text.",
+      "$ref": "#/$defs/InstanceData"
+    }
+  }
+}

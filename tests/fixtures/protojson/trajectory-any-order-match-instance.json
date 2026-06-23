@@ -1,0 +1,26 @@
+{
+  "predictedTrajectory": {
+    "toolCalls": [
+      {
+        "toolName": "B",
+        "toolInput": "{}"
+      },
+      {
+        "toolName": "A",
+        "toolInput": "{}"
+      }
+    ]
+  },
+  "referenceTrajectory": {
+    "toolCalls": [
+      {
+        "toolName": "A",
+        "toolInput": "{}"
+      },
+      {
+        "toolName": "B",
+        "toolInput": "{}"
+      }
+    ]
+  }
+}

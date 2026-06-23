@@ -1,0 +1,8 @@
+{
+  "prompt": {
+    "text": "Please list my landing zones"
+  },
+  "response": {
+    "text": "Here are your landing zones: aibake (ACTIVE), alis (FAILED)."
+  }
+}

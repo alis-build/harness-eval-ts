@@ -173,11 +173,23 @@ node dist/cli/bin.js envelope .debug/report.json \
   --output .debug/envelope.json
 ```
 
-Use `--projection trajectory|instances|agent-trace` to emit interchange rows instead of the full envelope document.
+Use `--projection trajectory|instances` to emit interchange rows instead of the full envelope document.
+
+### Vertex protojson subfields
+
+Each successful repetition may include:
+
+- `evaluationInstance` — Vertex `EvaluationInstance` wire JSON (`prompt`/`response` as `{ text }`; `agentEvalData` omitted in v1)
+- `trajectoryInstances` — map of `Trajectory*Instance` messages (`exactMatch`, `precision`, …)
+- `harnessMetrics` — camelCase precomputed trajectory scores
+
+Validate fixtures in CI via `@google-cloud/aiplatform` protobuf deserialize (`tests/eval-interchange/protojson-validation.test.ts`). For local Go verification, run `.debug/protojson/verify` against `tests/fixtures/protojson/*.json`.
 
 ### Grading config (`grading.yaml`)
 
-Outcome grading uses a **standalone YAML file** (Option B), separate from the suite. The `judge` block mirrors suite `defaultConfig`: `model`, `timeoutMs`, `env`, `maxConcurrent`, and nested `claudeCode` flags.
+Outcome grading uses a **standalone YAML file** (Option B), separate from the suite. The `judge` block mirrors suite `defaultConfig`: `model`, `timeoutMs`, `env`, `maxConcurrent`, `system_instruction`, and nested `claudeCode` flags.
+
+**Full field reference:** [suite-config.md — Grading config](suite-config.md#grading-config-gradingyaml)
 
 ```yaml
 judge:

@@ -1,0 +1,22 @@
+{
+  "predictedTrajectory": {
+    "toolCalls": [
+      {
+        "toolName": "Read",
+        "toolInput": "{}"
+      },
+      {
+        "toolName": "mcp__plugin_alis-build_api__ListLandingZones",
+        "toolInput": "{}"
+      }
+    ]
+  },
+  "referenceTrajectory": {
+    "toolCalls": [
+      {
+        "toolName": "mcp__plugin_alis-build_api__ListLandingZones",
+        "toolInput": "{}"
+      }
+    ]
+  }
+}

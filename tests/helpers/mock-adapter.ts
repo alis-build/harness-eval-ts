@@ -1,6 +1,12 @@
+/**
+ * Mock harness adapters for unit and integration tests.
+ *
+ * Returns deterministic {@link TrajectoryView} results without spawning
+ * Claude Code or other real harness processes.
+ */
+
 import type {
   AdapterDiagnostics,
-  AdapterResult,
   HarnessAdapter,
 } from "../../src/adapters/types";
 import type { TrajectoryView } from "../../src/types/trajectory";
@@ -15,6 +21,12 @@ const defaultDiagnostics: AdapterDiagnostics = {
   durationMs: 100,
 };
 
+/**
+ * Adapter that always returns a fixed trajectory view.
+ *
+ * @param view - Trajectory to return from every `run` call.
+ * @param diagnostics - Partial diagnostics merged over defaults.
+ */
 export function createMockAdapter(
   view: TrajectoryView = makeView(),
   diagnostics: Partial<AdapterDiagnostics> = {},
@@ -28,6 +40,7 @@ export function createMockAdapter(
   };
 }
 
+/** Adapter that throws on every run — simulates harness startup failures. */
 export function createFailingAdapter(message = "adapter failed"): HarnessAdapter {
   return {
     id: "mock-fail",
@@ -37,6 +50,11 @@ export function createFailingAdapter(message = "adapter failed"): HarnessAdapter
   };
 }
 
+/**
+ * Adapter that returns a different view on each run (FIFO queue).
+ *
+ * When the queue is exhausted, falls back to {@link makeView}.
+ */
 export function createQueueAdapter(views: TrajectoryView[]): HarnessAdapter {
   const queue = [...views];
   return {

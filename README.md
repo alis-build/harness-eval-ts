@@ -96,6 +96,8 @@ cases:
 
 Generic fields (`model`, `cwd`, `timeoutMs`, `env`) sit at the top level. Claude-specific options go under `claudeCode`.
 
+**Full suite & grading YAML reference:** [docs/suite-config.md](docs/suite-config.md) — all case/matrix fields, `reference_trajectory`, `human_ratings`, multi-file layout, and `grading.yaml` options.
+
 ### 2. Run behavioral eval
 
 ```bash
@@ -422,6 +424,8 @@ npx @alis-build/harness-eval --help
 
 Uses a standalone **`grading.yaml`** for judge model, timeout, env, and `claudeCode` flags (Option B — separate from the suite file).
 
+**Field reference:** [docs/suite-config.md — Grading config](docs/suite-config.md#grading-config-gradingyaml)
+
 ```yaml
 # examples/grading.yaml
 judge:
@@ -467,7 +471,7 @@ npx @alis-build/harness-eval envelope report.json --suite examples/basic.yaml --
 # Interchange projections
 npx @alis-build/harness-eval envelope report.json --projection trajectory --output trajectory.jsonl
 npx @alis-build/harness-eval envelope report.json --projection instances --output instances.json
-npx @alis-build/harness-eval envelope report.json --projection agent-trace --output agent-traces.json
+npx @alis-build/harness-eval envelope report.json --projection instances --output instances.jsonl
 ```
 
 | Option                                                      | Description                                               |
@@ -475,7 +479,7 @@ npx @alis-build/harness-eval envelope report.json --projection agent-trace --out
 | `--output <path>`                                           | Write output (stdout if omitted)                          |
 | `--grading <path>`                                          | Merge `grading.json` outcome scores into the envelope     |
 | `--suite <path>`                                            | Suite YAML for provenance (`uri`, `contentHash`)          |
-| `--projection envelope\|trajectory\|instances\|agent-trace` | Output shape (default: `envelope`)                        |
+| `--projection envelope\|trajectory\|instances` | Output shape (default: `envelope`)                        |
 | `--include-raw-stream-events`                               | Include adapter raw stream events in repetition artifacts |
 | `--no-transcript`                                           | Omit judge transcript artifacts                           |
 
@@ -509,6 +513,8 @@ See [Data contracts & schemas](#data-contracts--schemas) for type details.
 
 ## Suite concepts
 
+**Authoring reference:** [docs/suite-config.md](docs/suite-config.md) — complete field list for suite YAML, matrix cells, test cases, reference trajectories, and grading config.
+
 ### Test case
 
 One prompt + assertions + optional expectations, run N times per matrix cell.
@@ -532,6 +538,10 @@ assertions:
 ```
 
 Default threshold is `1.0` (every evaluated rep must pass). Reps where the harness crashes are excluded from the denominator and counted as `adapterErrors`.
+
+### Reference trajectory (optional)
+
+Define expected tool calls for Vertex trajectory metrics on the eval envelope. Use `tool_name_mode: bare` when reference steps use short tool names but the harness records MCP-prefixed names. See [docs/suite-config.md — Reference trajectory](docs/suite-config.md#reference-trajectory).
 
 **Full reference:** [docs/assertions.md](docs/assertions.md) — all assertion kinds, predicates, statistical model, and how to add new assertion types or harness adapters.
 
@@ -690,7 +700,7 @@ pnpm run typecheck
 pnpm run generate-schemas   # Zod → schemas/*.schema.json only
 ```
 
-**Docs:** [Assertion DSL & adapter extension](docs/assertions.md) · [Eval record contract (DB / CI)](docs/eval-record.md)
+**Docs:** [Suite & grading YAML](docs/suite-config.md) · [Assertion DSL & adapter extension](docs/assertions.md) · [Eval record contract (DB / CI)](docs/eval-record.md)
 
 ---
 

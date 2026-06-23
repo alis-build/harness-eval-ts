@@ -1,0 +1,18 @@
+{
+  "predictedTrajectory": {
+    "toolCalls": [
+      {
+        "toolName": "SearchSkills",
+        "toolInput": "{\"query\":\"deploy\"}"
+      }
+    ]
+  },
+  "referenceTrajectory": {
+    "toolCalls": [
+      {
+        "toolName": "SearchSkills",
+        "toolInput": "{\"query\":\"deploy\"}"
+      }
+    ]
+  }
+}
