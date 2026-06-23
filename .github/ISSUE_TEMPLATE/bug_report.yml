@@ -1,0 +1,89 @@
+name: Bug report
+description: Report incorrect CLI behavior, assertion/grading results, adapter failures, or schema issues
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. The most actionable reports include **expected vs actual** behavior, **versions** of this package and your harness setup, and a **minimal repro** (suite YAML snippet plus the `harness-eval` command you ran).
+
+        See [CONTRIBUTING.md](https://github.com/alis-build/harness-eval-ts/blob/main/.github/CONTRIBUTING.md) for development setup and how to run tests locally.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences describing the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you thought should happen (assertion pass rate, grading outcome, envelope shape, CLI exit code, etc.).
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead. Paste CLI output, stack traces, or relevant JSON excerpts if helpful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: |
+        Minimal steps: suite YAML (or path to an example), CLI command, and any env vars (`ANTHROPIC_API_KEY`, adapter config, etc.).
+      placeholder: |
+        ```yaml
+        adapter: claude-code
+        cases:
+          - id: example
+            prompt: "..."
+        ```
+        ```bash
+        npx @alis-build/harness-eval run suite.yaml --output report.json
+        ```
+    validations:
+      required: true
+
+  - type: input
+    id: node_version
+    attributes:
+      label: Node.js version
+      description: Output of `node -v`.
+      placeholder: e.g. v24.4.0
+    validations:
+      required: true
+
+  - type: input
+    id: package_version
+    attributes:
+      label: Package version / commit
+      description: npm version of `@alis-build/harness-eval`, or git SHA if linked from the repo.
+      placeholder: e.g. 0.1.0 or abc1234
+
+  - type: textarea
+    id: harness_setup
+    attributes:
+      label: Harness / adapter setup
+      description: Adapter id, model, `claudeCode` options, MCP config, or auth mode (`claude login` vs `ANTHROPIC_API_KEY`) when relevant.
+      placeholder: |
+        adapter: claude-code
+        model: claude-sonnet-4-6
+        isolateConfig: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of conduct
+      description: By submitting this issue, you follow the project's contribution expectations.
+      options:
+        - label: I have read [CONTRIBUTING.md](https://github.com/alis-build/harness-eval-ts/blob/main/.github/CONTRIBUTING.md) and agree to be respectful and constructive.
+          required: true

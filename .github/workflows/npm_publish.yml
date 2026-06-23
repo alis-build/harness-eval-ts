@@ -1,0 +1,103 @@
+name: Publish to npm
+
+on:
+    push:
+        tags:
+            - "v*" # Triggers when a tag starting with 'v' is pushed
+
+jobs:
+    changelog:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        outputs:
+            branch: ${{ steps.extract_branch.outputs.branch }}
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 0
+
+            - name: Determine the branch
+              id: extract_branch
+              run: |
+                  BRANCH=$(git for-each-ref --format='%(refname:short)' $(git rev-parse --verify HEAD) | grep 'heads/' | head -n 1 | sed 's|heads/||')
+                  echo "Branch: $BRANCH"
+                  if [ -z "$BRANCH" ]; then
+                    echo "No branch found, defaulting to 'main'"
+                    BRANCH="main"
+                  fi
+                  echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+            - name: Set up pnpm
+              uses: pnpm/action-setup@v6
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v5
+              with:
+                  node-version: "24"
+                  cache: "pnpm"
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Install conventional-changelog-cli
+              run: npm install -g conventional-changelog-cli
+
+            - name: Generate changelog
+              run: conventional-changelog -p angular -i CHANGELOG.md -s -r 0
+
+            - name: Update package.json version from the tag
+              run: |
+                  VERSION="${GITHUB_REF#refs/tags/v}"
+                  npm pkg set "version=${VERSION}"
+
+            - name: Commit and push release artifacts
+              run: |
+                  git config --global user.name "github-actions[bot]"
+                  git config --global user.email "github-actions[bot]@users.noreply.github.com"
+                  git add CHANGELOG.md package.json
+                  git commit -m "chore: release ${GITHUB_REF#refs/tags/}"
+                  git push origin HEAD:${{ steps.extract_branch.outputs.branch }}
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    publish:
+        needs: changelog
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            id-token: write
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v5
+              with:
+                  ref: ${{ needs.changelog.outputs.branch }}
+
+            - name: Set up pnpm
+              uses: pnpm/action-setup@v6
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v5
+              with:
+                  node-version: "24"
+                  registry-url: "https://registry.npmjs.org"
+                  scope: "@alis-build"
+                  cache: "pnpm"
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Run tests
+              run: pnpm test
+
+            - name: Typecheck
+              run: pnpm run typecheck
+
+            - name: Build
+              run: pnpm run build
+
+            - name: Publish to npm
+              run: npm publish --access public

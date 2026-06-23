@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest a new assertion, adapter, CLI option, eval interchange field, or docs improvement
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests are welcome. The strongest proposals describe a **concrete use case** (for example a missing assertion predicate, a new harness adapter, grading workflow needs, or eval envelope fields for your CI/DB pipeline) so maintainers can weigh trade-offs.
+
+        See [CONTRIBUTING.md](https://github.com/alis-build/harness-eval-ts/blob/main/.github/CONTRIBUTING.md) for how changes are usually tested and documented.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to achieve? What is hard or impossible today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How you imagine this working (suite YAML shape, adapter API, CLI flag, envelope field, etc.). Example YAML or API snippets are helpful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other ways you solved or worked around the problem, or other designs you considered.
+
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to open a PR for this (may be partial / draft).
+          required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of conduct
+      options:
+        - label: I have read [CONTRIBUTING.md](https://github.com/alis-build/harness-eval-ts/blob/main/.github/CONTRIBUTING.md) and agree to be respectful and constructive.
+          required: true

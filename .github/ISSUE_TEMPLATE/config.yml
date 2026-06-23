@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Assertion DSL reference
+    url: https://github.com/alis-build/harness-eval-ts/blob/main/docs/assertions.md
+    about: Assertion kinds, statistical thresholds, and how to extend the grader.
+  - name: Eval record contract
+    url: https://github.com/alis-build/harness-eval-ts/blob/main/docs/eval-record.md
+    about: EvalRunEnvelope, TrajectoryView, and schema versioning for CI and storage.
