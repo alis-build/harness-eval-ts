@@ -64,7 +64,7 @@ defaultConfig:
   timeoutMs: 120000
   cwd: ..
   claudeCode:
-    isolateConfig: false          # use your logged-in Claude Code config
+    isolateConfig: false # use your logged-in Claude Code config
     permissionMode: bypassPermissions
     allowedTools:
       - Read
@@ -125,13 +125,13 @@ harness-eval separates **vendor output** from **eval interchange**. Use the type
 
 ### Layering
 
-| Layer | Type | Where | Use for |
-|-------|------|-------|---------|
-| Vendor stream | `StreamEvent` | `src/types/stream.ts` | Claude `stream-json` debug only |
-| Harness session | **`TrajectoryView`** | `src/types/trajectory.ts` | Assertions, trajectory queries, judge input |
-| Run report | **`SuiteReport`** | `report.json` from `run` | Runner output; full trajectories + assertion stats |
-| Eval record | **`EvalRunEnvelope`** | `buildEvalRunEnvelope()` | CI gates, APIs, DB storage |
-| Observability | OTLP | `--otel-output` | Tempo / Jaeger side export |
+| Layer           | Type                  | Where                     | Use for                                            |
+| --------------- | --------------------- | ------------------------- | -------------------------------------------------- |
+| Vendor stream   | `StreamEvent`         | `src/types/stream.ts`     | Claude `stream-json` debug only                    |
+| Harness session | **`TrajectoryView`**  | `src/types/trajectory.ts` | Assertions, trajectory queries, judge input        |
+| Run report      | **`SuiteReport`**     | `report.json` from `run`  | Runner output; full trajectories + assertion stats |
+| Eval record     | **`EvalRunEnvelope`** | `buildEvalRunEnvelope()`  | CI gates, APIs, DB storage                         |
+| Observability   | OTLP                  | `--otel-output`           | Tempo / Jaeger side export                         |
 
 ```
 Suite YAML → run → TrajectoryView → SuiteReport (report.json)
@@ -143,14 +143,14 @@ Suite YAML → run → TrajectoryView → SuiteReport (report.json)
 
 Cross-harness normalized session. Every adapter maps vendor output into this shape.
 
-| Field | Meaning |
-|-------|---------|
-| `meta` | Session id, model, cwd, available tools, MCP server status |
-| `toolCalls` | Every tool call in emission order (`name`, `args`, `result`, `turnIndex`, `callIndex`) |
-| `turns` | Per-turn assistant text and tool calls |
-| `finalResponse` | Concatenated assistant text (for `response_contains` and judges) |
-| `usage` | Tokens, cost, duration, turn count |
-| `success` | Whether the harness reported success |
+| Field           | Meaning                                                                                |
+| --------------- | -------------------------------------------------------------------------------------- |
+| `meta`          | Session id, model, cwd, available tools, MCP server status                             |
+| `toolCalls`     | Every tool call in emission order (`name`, `args`, `result`, `turnIndex`, `callIndex`) |
+| `turns`         | Per-turn assistant text and tool calls                                                 |
+| `finalResponse` | Concatenated assistant text (for `response_contains` and judges)                       |
+| `usage`         | Tokens, cost, duration, turn count                                                     |
+| `success`       | Whether the harness reported success                                                   |
 
 Tool names follow the harness format (e.g. `mcp__plugin_alis-build_api__SearchSkills`). Assertions use `turnIndex` / `callIndex` for ordering — not wall-clock time.
 
@@ -172,10 +172,13 @@ Gate behavioral eval on `cells[].passed` or on assertion stats. This file is eno
 Versioned document for **storage and interchange** (`schemaVersion` `1.0`). Build it from a report (and optional grading):
 
 ```typescript
-import { buildEvalRunEnvelope, buildEvalRunEnvelopeFromFiles } from "@alis-build/harness-eval";
+import {
+  buildEvalRunEnvelope,
+  buildEvalRunEnvelopeFromFiles,
+} from "@alis-build/harness-eval";
 
 const envelope = buildEvalRunEnvelope(report, {
-  grading,                                    // optional: from gradeReport()
+  grading, // optional: from gradeReport()
   suite: { uri: "./examples/basic.yaml" },
   provenance: { git: { commit: process.env.GITHUB_SHA } },
 });
@@ -187,23 +190,23 @@ const envelope = await buildEvalRunEnvelopeFromFiles("report.json", {
 });
 ```
 
-| Field | Meaning |
-|-------|---------|
-| `summary.behavioralPass` | All cells passed assertion thresholds |
-| `summary.outcomePass` | All graded expectations passed (when outcome layer present) |
-| `cells[].repetitions[]` | Unit of work for judges — trajectory, assertion results, optional `outcomeGrades` |
-| `cells[].repetitions[].artifacts.transcript` | Text for LLM judges (`trajectoryToTranscript`) |
-| `cells[].repetitions[].externalScores` | Attach scores from LangSmith, Braintrust, etc. |
+| Field                                        | Meaning                                                                           |
+| -------------------------------------------- | --------------------------------------------------------------------------------- |
+| `summary.behavioralPass`                     | All cells passed assertion thresholds                                             |
+| `summary.outcomePass`                        | All graded expectations passed (when outcome layer present)                       |
+| `cells[].repetitions[]`                      | Unit of work for judges — trajectory, assertion results, optional `outcomeGrades` |
+| `cells[].repetitions[].artifacts.transcript` | Text for LLM judges (`trajectoryToTranscript`)                                    |
+| `cells[].repetitions[].externalScores`       | Attach scores from LangSmith, Braintrust, etc.                                    |
 
 **Full reference:** [docs/eval-record.md](docs/eval-record.md)
 
 ### TypeScript types & Zod schemas
 
-| Artifact | Location |
-|----------|----------|
-| TypeScript interfaces | `@alis-build/harness-eval` — `TrajectoryView`, `EvalRunEnvelope`, `AssertionResult`, … |
-| Zod schemas (runtime validation) | `src/schemas/` in repo only — not published on npm |
-| JSON Schema (DB / OpenAPI) | `schemas/*.schema.json` — shipped in the npm package |
+| Artifact                         | Location                                                                               |
+| -------------------------------- | -------------------------------------------------------------------------------------- |
+| TypeScript interfaces            | `@alis-build/harness-eval` — `TrajectoryView`, `EvalRunEnvelope`, `AssertionResult`, … |
+| Zod schemas (runtime validation) | `src/schemas/` in repo only — not published on npm                                     |
+| JSON Schema (DB / OpenAPI)       | `schemas/*.schema.json` — shipped in the npm package                                   |
 
 Zod is the **source of truth** for JSON Schema. Each field has `title` and `description` for downstream tooling.
 
@@ -244,12 +247,12 @@ You do not need `harness-eval grade` if you already have LangSmith, Braintrust, 
 
 ### What harness-eval provides vs what you can replace
 
-| Concern | harness-eval | External framework / custom judge |
-|---------|--------------|-----------------------------------|
-| Headless harness runs | `run` / `runSuite` | — |
-| Tool-call behavior | Assertions on `TrajectoryView` | Optional: re-implement on `toolCalls` |
-| Outcome / rubric scoring | `grade` (Claude judge) | Your judge, eval platform, or human review |
-| Storage contract | `EvalRunEnvelope` | Same envelope; attach `externalScores` |
+| Concern                  | harness-eval                   | External framework / custom judge          |
+| ------------------------ | ------------------------------ | ------------------------------------------ |
+| Headless harness runs    | `run` / `runSuite`             | —                                          |
+| Tool-call behavior       | Assertions on `TrajectoryView` | Optional: re-implement on `toolCalls`      |
+| Outcome / rubric scoring | `grade` (Claude judge)         | Your judge, eval platform, or human review |
+| Storage contract         | `EvalRunEnvelope`              | Same envelope; attach `externalScores`     |
 
 ### Pattern 1 — Behavioral only (no LLM judge)
 
@@ -267,7 +270,11 @@ Omit `expectations` from the suite, or ignore them. Your pipeline only checks `r
 Keep the harness-eval grading **workflow** (concurrency, report shape) but swap the judge implementation:
 
 ```typescript
-import { gradeReport, trajectoryToTranscript, type GraderFn } from "@alis-build/harness-eval";
+import {
+  gradeReport,
+  trajectoryToTranscript,
+  type GraderFn,
+} from "@alis-build/harness-eval";
 
 const myJudge: GraderFn = async ({ prompt, transcript, expectations }) => {
   // Call your API, rubric service, or local model
@@ -298,9 +305,7 @@ const expectations = cell.expectations ?? [];
 
 // Prefer transcript for LLM judges
 import { trajectoryToTranscript } from "@alis-build/harness-eval";
-const transcript = view
-  ? trajectoryToTranscript(view, prompt ?? "")
-  : null;
+const transcript = view ? trajectoryToTranscript(view, prompt ?? "") : null;
 
 // Or use structured toolCalls for deterministic checks
 const toolNames = view?.toolCalls.map((t) => t.name) ?? [];
@@ -355,8 +360,8 @@ Built-in grader input shape:
 ```typescript
 interface GraderInput {
   prompt: string;
-  transcript: string;      // from trajectoryToTranscript()
-  expectations: string[];  // from suite / report
+  transcript: string; // from trajectoryToTranscript()
+  expectations: string[]; // from suite / report
 }
 ```
 
@@ -376,10 +381,10 @@ Map your framework's output into these shapes (or use `externalScores`) so CI an
 
 ## Two layers of evaluation
 
-| Layer | Command | What it checks | Mechanism |
-|-------|---------|----------------|-----------|
-| **Behavior** | `run` | Tool calls, order, args, efficiency | Deterministic assertions on `TrajectoryView` |
-| **Outcome** | `grade` | Answer quality, grounding, completeness | LLM judge on transcript + `finalResponse` |
+| Layer        | Command | What it checks                          | Mechanism                                    |
+| ------------ | ------- | --------------------------------------- | -------------------------------------------- |
+| **Behavior** | `run`   | Tool calls, order, args, efficiency     | Deterministic assertions on `TrajectoryView` |
+| **Outcome**  | `grade` | Answer quality, grounding, completeness | LLM judge on transcript + `finalResponse`    |
 
 Both layers use statistical thresholds: a case runs `repetitions` times per matrix cell, and each assertion/expectation has a pass-rate threshold (default `1.0`).
 
@@ -397,18 +402,18 @@ npx @alis-build/harness-eval --help
 
 ### `run`
 
-| Option | Description |
-|--------|-------------|
-| `--output <path>` | Write full `SuiteReport` JSON |
-| `--otel-output <dir>` | Write OTLP trace JSON per repetition (optional) |
-| `--format console\|markdown\|json` | Report format (default: `console`) |
-| `--baseline <path>` | Compare against a previous report |
-| `--max-concurrent <n>` | Parallel harness processes (default: 4) |
-| `--adapter <id>` | Harness adapter (default: `claude-code`) |
-| `--quiet` | Progress: dots only (`.` ok, `x` fail) |
-| `--verbose` | Progress: per-rep tool counts and assertion summary |
-| `--progress <mode>` | `default` \| `quiet` \| `verbose` \| `json` (ndjson on stderr; disables color) |
-| `--color` / `--no-color` | Force or disable ANSI colors (auto when stderr is a TTY; `NO_COLOR` / `FORCE_COLOR` env) |
+| Option                             | Description                                                                              |
+| ---------------------------------- | ---------------------------------------------------------------------------------------- |
+| `--output <path>`                  | Write full `SuiteReport` JSON                                                            |
+| `--otel-output <dir>`              | Write OTLP trace JSON per repetition (optional)                                          |
+| `--format console\|markdown\|json` | Report format (default: `console`)                                                       |
+| `--baseline <path>`                | Compare against a previous report                                                        |
+| `--max-concurrent <n>`             | Parallel harness processes (default: 4)                                                  |
+| `--adapter <id>`                   | Harness adapter (default: `claude-code`)                                                 |
+| `--quiet`                          | Progress: dots only (`.` ok, `x` fail)                                                   |
+| `--verbose`                        | Progress: per-rep tool counts and assertion summary                                      |
+| `--progress <mode>`                | `default` \| `quiet` \| `verbose` \| `json` (ndjson on stderr; disables color)           |
+| `--color` / `--no-color`           | Force or disable ANSI colors (auto when stderr is a TTY; `NO_COLOR` / `FORCE_COLOR` env) |
 
 ### `grade`
 
@@ -429,16 +434,16 @@ judge:
 npx @alis-build/harness-eval grade report.json --config examples/grading.yaml --output grading.json
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--config <path>` | Grading YAML (`judge` block) — model, env, timeout, `claudeCode` |
-| `--output <path>` | Write grading JSON |
-| `--expectations <path>` | Sidecar YAML/JSON if report lacks expectations |
-| `--format console\|json` | Output format |
-| `--model <id>` | Overrides `judge.model` in config |
-| `--binary <path>` | Overrides `judge.claudeCode.binary` |
-| `--timeout-ms <n>` | Overrides `judge.timeoutMs` |
-| `--max-concurrent <n>` | Overrides `judge.maxConcurrent` (default: 2 if unset) |
+| Option                                 | Description                                                       |
+| -------------------------------------- | ----------------------------------------------------------------- |
+| `--config <path>`                      | Grading YAML (`judge` block) — model, env, timeout, `claudeCode`  |
+| `--output <path>`                      | Write grading JSON                                                |
+| `--expectations <path>`                | Sidecar YAML/JSON if report lacks expectations                    |
+| `--format console\|json`               | Output format                                                     |
+| `--model <id>`                         | Overrides `judge.model` in config                                 |
+| `--binary <path>`                      | Overrides `judge.claudeCode.binary`                               |
+| `--timeout-ms <n>`                     | Overrides `judge.timeoutMs`                                       |
+| `--max-concurrent <n>`                 | Overrides `judge.maxConcurrent` (default: 2 if unset)             |
 | `--quiet` / `--verbose` / `--progress` | Same progress modes as `run` (including `--color` / `--no-color`) |
 
 CLI flags override the YAML file. Expectations still come from `report.json` (copied from the suite at `run` time) unless `--expectations` is set. The grading report may include `gradingConfigPath` when `--config` was used.
@@ -462,14 +467,14 @@ npx @alis-build/harness-eval envelope report.json --projection instances --outpu
 npx @alis-build/harness-eval envelope report.json --projection agent-trace --output agent-traces.json
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--output <path>` | Write output (stdout if omitted) |
-| `--grading <path>` | Merge `grading.json` outcome scores into the envelope |
-| `--suite <path>` | Suite YAML for provenance (`uri`, `contentHash`) |
-| `--projection envelope\|trajectory\|instances\|agent-trace` | Output shape (default: `envelope`) |
-| `--include-raw-stream-events` | Include adapter raw stream events in repetition artifacts |
-| `--no-transcript` | Omit judge transcript artifacts |
+| Option                                                      | Description                                               |
+| ----------------------------------------------------------- | --------------------------------------------------------- |
+| `--output <path>`                                           | Write output (stdout if omitted)                          |
+| `--grading <path>`                                          | Merge `grading.json` outcome scores into the envelope     |
+| `--suite <path>`                                            | Suite YAML for provenance (`uri`, `contentHash`)          |
+| `--projection envelope\|trajectory\|instances\|agent-trace` | Output shape (default: `envelope`)                        |
+| `--include-raw-stream-events`                               | Include adapter raw stream events in repetition artifacts |
+| `--no-transcript`                                           | Omit judge transcript artifacts                           |
 
 Exit codes: `0` = envelope built and behavioral pass; `1` = built but behavioral failures; `2` = usage or file errors.
 
@@ -483,15 +488,15 @@ Re-render an existing `report.json` without re-running the harness.
 
 After a typical run:
 
-| File | Produced by | Purpose |
-|------|-------------|---------|
-| **`suite.yaml`** | You | Test spec: prompts, matrix, assertions, expectations |
-| **`report.json`** | `run --output` | `SuiteReport` — trajectories, assertion stats, per-rep details |
-| **`grading.json`** | `grade --output` | Outcome scores with evidence (optional; or use external judge) |
-| **`envelope.json`** | `envelope --output` | Versioned `EvalRunEnvelope` for DB / API / eval platforms |
-| **`trajectory.jsonl`** | `envelope --projection trajectory` | Tabular interchange rows (JSONL) |
-| **`schemas/*.schema.json`** | `pnpm run generate-schemas` | JSON Schema for validators and OpenAPI |
-| **`otel-traces/*.otlp.json`** | `run --otel-output` | OTLP for trace UIs (optional; not the eval contract) |
+| File                          | Produced by                        | Purpose                                                        |
+| ----------------------------- | ---------------------------------- | -------------------------------------------------------------- |
+| **`suite.yaml`**              | You                                | Test spec: prompts, matrix, assertions, expectations           |
+| **`report.json`**             | `run --output`                     | `SuiteReport` — trajectories, assertion stats, per-rep details |
+| **`grading.json`**            | `grade --output`                   | Outcome scores with evidence (optional; or use external judge) |
+| **`envelope.json`**           | `envelope --output`                | Versioned `EvalRunEnvelope` for DB / API / eval platforms      |
+| **`trajectory.jsonl`**        | `envelope --projection trajectory` | Tabular interchange rows (JSONL)                               |
+| **`schemas/*.schema.json`**   | `pnpm run generate-schemas`        | JSON Schema for validators and OpenAPI                         |
+| **`otel-traces/*.otlp.json`** | `run --otel-output`                | OTLP for trace UIs (optional; not the eval contract)           |
 
 Write artifact paths with `--output` (and `--otel-output` for traces) wherever your pipeline or CI expects them.
 
@@ -520,7 +525,7 @@ List fields like `allowedTools` and `pluginDirs` are **replaced**, not merged.
 ```yaml
 assertions:
   - called: mcp__api__search_skills
-    threshold: 0.8   # pass if ≥80% of reps call the tool
+    threshold: 0.8 # pass if ≥80% of reps call the tool
 ```
 
 Default threshold is `1.0` (every evaluated rep must pass). Reps where the harness crashes are excluded from the denominator and counted as `adapterErrors`.
@@ -539,7 +544,11 @@ Built-in adapters register at module load. Today only `claude-code` ships; addit
 4. Set `adapter: <id>` in suite YAML; the runner resolves via `getAdapter(id)`.
 
 ```typescript
-import { registerAdapter, listAdapters, getAdapter } from "@alis-build/harness-eval";
+import {
+  registerAdapter,
+  listAdapters,
+  getAdapter,
+} from "@alis-build/harness-eval";
 
 registerAdapter("my-harness", myAdapter);
 console.log(listAdapters()); // ["claude-code", "my-harness"]
@@ -555,40 +564,40 @@ Nested under `claudeCode` in YAML (or flat in programmatic config). Maps to [Cla
 
 The adapter always passes `-p`, `--output-format stream-json`, and `--verbose`.
 
-| Field | CLI flag | Notes |
-|-------|----------|-------|
-| `binary` | — | Default `claude` |
-| `pluginDirs` | `--plugin-dir` | Repeatable |
-| `pluginUrls` | `--plugin-url` | Repeatable |
-| `addDirs` | `--add-dir` | Extra readable dirs (repeatable) |
-| `mcpConfig` | `--mcp-config` | MCP config file path |
-| `strictMcpConfig` | `--strict-mcp-config` | Only MCP servers from `mcpConfig` |
-| `model` | `--model` | Also settable at top level |
-| `permissionMode` | `--permission-mode` | `default`, `acceptEdits`, `plan`, `auto`, `dontAsk`, `bypassPermissions` |
-| `effort` | `--effort` | `low` … `max` |
-| `agent` | `--agent` | Subagent for session |
-| `fallbackModel` | `--fallback-model` | Comma-separated fallback chain |
-| `tools` | `--tools` | Restrict built-in tools (`Bash,Edit,Read` or `default`) |
-| `allowedTools` | `--allowedTools` | Auto-approve tool patterns |
-| `disallowedTools` | `--disallowedTools` | Deny tool patterns |
-| `maxTurns` | `--max-turns` | Print-mode turn cap |
-| `maxBudgetUsd` | `--max-budget-usd` | Print-mode spend cap |
-| `settings` | `--settings` | Settings JSON file path or inline JSON string |
-| `settingSources` | `--setting-sources` | e.g. `user,project` |
-| `systemPrompt` | `--system-prompt` | Replace default system prompt |
-| `systemPromptFile` | `--system-prompt-file` | Replace from file |
-| `appendSystemPrompt` | `--append-system-prompt` | Append to default prompt |
-| `appendSystemPromptFile` | `--append-system-prompt-file` | Append from file |
-| `debug` | `--debug` | `true` or category filter string |
-| `debugFile` | `--debug-file` | Debug log path |
-| `includeHookEvents` | `--include-hook-events` | Hook events in stream-json |
-| `noSessionPersistence` | `--no-session-persistence` | Don't save session to disk |
-| `disableSlashCommands` | `--disable-slash-commands` | Disable skills/commands for session |
-| `bare` | `--bare` | Skip auto-discovery (hooks, skills, plugins, MCP) |
-| `safeMode` | `--safe-mode` | Disable customizations for troubleshooting |
-| `dangerouslySkipPermissions` | `--dangerously-skip-permissions` | Same as `bypassPermissions` mode |
-| `allowDangerouslySkipPermissions` | `--allow-dangerously-skip-permissions` | Add bypass to mode cycle |
-| `isolateConfig` | — | `false` = use your login/plugins; `true` (default) = fresh temp config |
+| Field                             | CLI flag                               | Notes                                                                    |
+| --------------------------------- | -------------------------------------- | ------------------------------------------------------------------------ |
+| `binary`                          | —                                      | Default `claude`                                                         |
+| `pluginDirs`                      | `--plugin-dir`                         | Repeatable                                                               |
+| `pluginUrls`                      | `--plugin-url`                         | Repeatable                                                               |
+| `addDirs`                         | `--add-dir`                            | Extra readable dirs (repeatable)                                         |
+| `mcpConfig`                       | `--mcp-config`                         | MCP config file path                                                     |
+| `strictMcpConfig`                 | `--strict-mcp-config`                  | Only MCP servers from `mcpConfig`                                        |
+| `model`                           | `--model`                              | Also settable at top level                                               |
+| `permissionMode`                  | `--permission-mode`                    | `default`, `acceptEdits`, `plan`, `auto`, `dontAsk`, `bypassPermissions` |
+| `effort`                          | `--effort`                             | `low` … `max`                                                            |
+| `agent`                           | `--agent`                              | Subagent for session                                                     |
+| `fallbackModel`                   | `--fallback-model`                     | Comma-separated fallback chain                                           |
+| `tools`                           | `--tools`                              | Restrict built-in tools (`Bash,Edit,Read` or `default`)                  |
+| `allowedTools`                    | `--allowedTools`                       | Auto-approve tool patterns                                               |
+| `disallowedTools`                 | `--disallowedTools`                    | Deny tool patterns                                                       |
+| `maxTurns`                        | `--max-turns`                          | Print-mode turn cap                                                      |
+| `maxBudgetUsd`                    | `--max-budget-usd`                     | Print-mode spend cap                                                     |
+| `settings`                        | `--settings`                           | Settings JSON file path or inline JSON string                            |
+| `settingSources`                  | `--setting-sources`                    | e.g. `user,project`                                                      |
+| `systemPrompt`                    | `--system-prompt`                      | Replace default system prompt                                            |
+| `systemPromptFile`                | `--system-prompt-file`                 | Replace from file                                                        |
+| `appendSystemPrompt`              | `--append-system-prompt`               | Append to default prompt                                                 |
+| `appendSystemPromptFile`          | `--append-system-prompt-file`          | Append from file                                                         |
+| `debug`                           | `--debug`                              | `true` or category filter string                                         |
+| `debugFile`                       | `--debug-file`                         | Debug log path                                                           |
+| `includeHookEvents`               | `--include-hook-events`                | Hook events in stream-json                                               |
+| `noSessionPersistence`            | `--no-session-persistence`             | Don't save session to disk                                               |
+| `disableSlashCommands`            | `--disable-slash-commands`             | Disable skills/commands for session                                      |
+| `bare`                            | `--bare`                               | Skip auto-discovery (hooks, skills, plugins, MCP)                        |
+| `safeMode`                        | `--safe-mode`                          | Disable customizations for troubleshooting                               |
+| `dangerouslySkipPermissions`      | `--dangerously-skip-permissions`       | Same as `bypassPermissions` mode                                         |
+| `allowDangerouslySkipPermissions` | `--allow-dangerously-skip-permissions` | Add bypass to mode cycle                                                 |
+| `isolateConfig`                   | —                                      | `false` = use your login/plugins; `true` (default) = fresh temp config   |
 
 Generic `cwd` sets the child process working directory (not a Claude flag). Relative paths in `mcpConfig`, `pluginDirs`, `addDirs`, and settings/prompt files resolve against the suite YAML directory.
 
@@ -623,7 +632,10 @@ const grading = await gradeReport(report, gradeOpts);
 // Export trajectory for custom tooling
 const view = report.cells[0].repetitions[0].adapterResult?.view;
 if (view) {
-  const transcript = trajectoryToTranscript(view, "Read README.md and summarize harness-eval.");
+  const transcript = trajectoryToTranscript(
+    view,
+    "Read README.md and summarize harness-eval.",
+  );
   const otlp = trajectoryToOtlp(view, { prompt: "..." });
 }
 
@@ -686,7 +698,3 @@ pnpm run generate-schemas   # Zod → schemas/*.schema.json only
 - [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/) — OTLP export shape
 
 ---
-
-## License
-
-MIT
