@@ -1,0 +1,441 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/alis-build/harness-eval-ts/main/schemas/trajectory-view.schema.json",
+  "title": "TrajectoryViewExport",
+  "description": "TrajectoryView with schemaVersion, as embedded in EvalRunEnvelope repetitions.",
+  "type": "object",
+  "properties": {
+    "meta": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "toolCalls": {
+      "$ref": "#/$defs/__schema11"
+    },
+    "turns": {
+      "$ref": "#/$defs/__schema22"
+    },
+    "finalResponse": {
+      "$ref": "#/$defs/__schema28"
+    },
+    "finalStopReason": {
+      "$ref": "#/$defs/__schema29"
+    },
+    "usage": {
+      "$ref": "#/$defs/__schema31"
+    },
+    "retries": {
+      "$ref": "#/$defs/__schema37"
+    },
+    "success": {
+      "$ref": "#/$defs/__schema40"
+    },
+    "schemaVersion": {
+      "$ref": "#/$defs/__schema41"
+    }
+  },
+  "required": [
+    "meta",
+    "toolCalls",
+    "turns",
+    "finalResponse",
+    "finalStopReason",
+    "usage",
+    "retries",
+    "success",
+    "schemaVersion"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "description": "Session metadata from harness initialization.",
+      "$ref": "#/$defs/SessionMeta"
+    },
+    "__schema1": {
+      "type": "string",
+      "description": "Harness-assigned session identifier from the vendor stream."
+    },
+    "__schema2": {
+      "type": "string",
+      "description": "Model identifier used for the session, e.g. claude-sonnet-4-6."
+    },
+    "__schema3": {
+      "type": "string",
+      "description": "Working directory the harness used for the run."
+    },
+    "__schema4": {
+      "description": "Permission mode active for the session, when reported by the harness.",
+      "$ref": "#/$defs/__schema5"
+    },
+    "__schema5": {
+      "type": "string"
+    },
+    "__schema6": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema7"
+      },
+      "description": "Tool names the harness reported as available at session start."
+    },
+    "__schema7": {
+      "type": "string"
+    },
+    "__schema8": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/McpServer"
+      },
+      "description": "MCP servers configured for the session, with connection status."
+    },
+    "McpServer": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/__schema9"
+        },
+        "status": {
+          "$ref": "#/$defs/__schema10"
+        }
+      },
+      "required": [
+        "name",
+        "status"
+      ],
+      "additionalProperties": false,
+      "title": "McpServer",
+      "description": "MCP server entry from session initialization metadata."
+    },
+    "__schema9": {
+      "type": "string",
+      "description": "MCP server name as reported by the harness."
+    },
+    "__schema10": {
+      "type": "string",
+      "description": "Connection status at session start, e.g. connected or failed."
+    },
+    "SessionMeta": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "model": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "cwd": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "permissionMode": {
+          "$ref": "#/$defs/__schema4"
+        },
+        "availableTools": {
+          "$ref": "#/$defs/__schema6"
+        },
+        "mcpServers": {
+          "$ref": "#/$defs/__schema8"
+        }
+      },
+      "required": [
+        "sessionId",
+        "model",
+        "cwd",
+        "availableTools",
+        "mcpServers"
+      ],
+      "additionalProperties": false,
+      "title": "SessionMeta",
+      "description": "Session metadata captured from harness initialization (e.g. Claude system/init)."
+    },
+    "__schema11": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ToolCall"
+      },
+      "description": "Every tool call in global emission order."
+    },
+    "ToolCall": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/__schema12"
+        },
+        "namespace": {
+          "$ref": "#/$defs/__schema13"
+        },
+        "callId": {
+          "$ref": "#/$defs/__schema15"
+        },
+        "args": {
+          "$ref": "#/$defs/__schema16"
+        },
+        "result": {
+          "$ref": "#/$defs/__schema17"
+        },
+        "isError": {
+          "$ref": "#/$defs/__schema19"
+        },
+        "turnIndex": {
+          "$ref": "#/$defs/__schema20"
+        },
+        "callIndex": {
+          "$ref": "#/$defs/__schema21"
+        }
+      },
+      "required": [
+        "name",
+        "namespace",
+        "callId",
+        "args",
+        "result",
+        "isError",
+        "turnIndex",
+        "callIndex"
+      ],
+      "additionalProperties": false,
+      "title": "ToolCall",
+      "description": "One tool invocation in emission order. Primary unit for behavioral assertions."
+    },
+    "__schema12": {
+      "type": "string",
+      "description": "Fully-qualified tool name, e.g. mcp__plugin_alis-build_api__SearchSkills or Bash.",
+      "examples": [
+        "mcp__plugin_alis-build_api__SearchSkills",
+        "Bash"
+      ]
+    },
+    "__schema13": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/__schema14"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Namespace prefix for MCP-style names (mcp__<server>), or null for built-in tools.",
+      "examples": [
+        "mcp__plugin_alis-build_api",
+        null
+      ]
+    },
+    "__schema14": {
+      "type": "string"
+    },
+    "__schema15": {
+      "type": "string",
+      "description": "Vendor tool-use block id; matches a later tool_result.tool_use_id when present."
+    },
+    "__schema16": {
+      "description": "Arguments the model emitted for this tool call. Tool-specific schema."
+    },
+    "__schema17": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/__schema18"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Tool result payload, or null if no result was observed (e.g. process killed)."
+    },
+    "__schema18": {},
+    "__schema19": {
+      "type": "boolean",
+      "description": "Whether the tool reported an error in its result envelope."
+    },
+    "__schema20": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991,
+      "description": "Assistant turn that produced this call. Parallel calls in one message share a turnIndex."
+    },
+    "__schema21": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991,
+      "description": "Index in the global ordered tool-call sequence (used for called_before assertions)."
+    },
+    "__schema22": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AssistantTurn"
+      },
+      "description": "Assistant turns with per-turn text and tool calls."
+    },
+    "AssistantTurn": {
+      "type": "object",
+      "properties": {
+        "turnIndex": {
+          "$ref": "#/$defs/__schema23"
+        },
+        "text": {
+          "$ref": "#/$defs/__schema24"
+        },
+        "toolCalls": {
+          "$ref": "#/$defs/__schema25"
+        },
+        "stopReason": {
+          "$ref": "#/$defs/__schema26"
+        }
+      },
+      "required": [
+        "turnIndex",
+        "text",
+        "toolCalls",
+        "stopReason"
+      ],
+      "additionalProperties": false,
+      "title": "AssistantTurn",
+      "description": "One assistant turn: text content plus any tool calls in that turn."
+    },
+    "__schema23": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991,
+      "description": "Monotonic assistant turn index."
+    },
+    "__schema24": {
+      "type": "string",
+      "description": "Assistant text emitted in this turn (may be empty for tool-only turns)."
+    },
+    "__schema25": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ToolCall"
+      },
+      "description": "Tool calls emitted in this turn, in block order."
+    },
+    "__schema26": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/__schema27"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Model stop reason for this turn, or null if not reported.",
+      "examples": [
+        "end_turn",
+        "tool_use",
+        null
+      ]
+    },
+    "__schema27": {
+      "type": "string"
+    },
+    "__schema28": {
+      "type": "string",
+      "description": "All assistant text concatenated across turns. Used for response_contains assertions."
+    },
+    "__schema29": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/__schema30"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Stop reason of the last assistant turn."
+    },
+    "__schema30": {
+      "type": "string"
+    },
+    "__schema31": {
+      "description": "Aggregate usage and cost for the session.",
+      "$ref": "#/$defs/UsageSummary"
+    },
+    "__schema32": {
+      "type": "number",
+      "description": "Total input tokens for the session."
+    },
+    "__schema33": {
+      "type": "number",
+      "description": "Total output tokens for the session."
+    },
+    "__schema34": {
+      "type": "number",
+      "description": "Total session cost in USD when reported by the harness."
+    },
+    "__schema35": {
+      "type": "number",
+      "description": "Session duration in milliseconds from harness result metadata."
+    },
+    "__schema36": {
+      "type": "number",
+      "description": "Number of assistant turns in the session."
+    },
+    "UsageSummary": {
+      "type": "object",
+      "properties": {
+        "inputTokens": {
+          "$ref": "#/$defs/__schema32"
+        },
+        "outputTokens": {
+          "$ref": "#/$defs/__schema33"
+        },
+        "totalCostUsd": {
+          "$ref": "#/$defs/__schema34"
+        },
+        "durationMs": {
+          "$ref": "#/$defs/__schema35"
+        },
+        "numTurns": {
+          "$ref": "#/$defs/__schema36"
+        }
+      },
+      "required": [
+        "inputTokens",
+        "outputTokens",
+        "totalCostUsd",
+        "durationMs",
+        "numTurns"
+      ],
+      "additionalProperties": false,
+      "title": "UsageSummary",
+      "description": "Aggregate token usage, cost, and timing from the harness result."
+    },
+    "__schema37": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/RetryRecord"
+      },
+      "description": "Retry events observed during the run."
+    },
+    "RetryRecord": {
+      "type": "object",
+      "properties": {
+        "offsetMs": {
+          "$ref": "#/$defs/__schema38"
+        },
+        "raw": {
+          "$ref": "#/$defs/__schema39"
+        }
+      },
+      "required": [
+        "offsetMs",
+        "raw"
+      ],
+      "additionalProperties": false,
+      "title": "RetryRecord",
+      "description": "Rate-limit or transient error retry observed during the run."
+    },
+    "__schema38": {
+      "type": "number",
+      "description": "Approximate milliseconds since session start when the retry was observed."
+    },
+    "__schema39": {
+      "description": "Raw vendor payload from the retry event (e.g. system/api_retry)."
+    },
+    "__schema40": {
+      "type": "boolean",
+      "description": "Whether the harness result envelope indicated success."
+    },
+    "__schema41": {
+      "type": "string",
+      "const": "1.0",
+      "description": "TrajectoryView schema version for storage and API interchange."
+    }
+  }
+}

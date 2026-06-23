@@ -1,0 +1,9 @@
+id: summarize-readme
+category: smoke
+prompt: "Read README.md and summarize what harness-eval does in one sentence."
+repetitions: 1
+assertions:
+  - called: Read
+    threshold: 0.8
+  - not:
+      responded_without_tool_calls: true

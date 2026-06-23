@@ -1,0 +1,4 @@
+id: alpha-case
+prompt: "first prompt"
+assertions:
+  - called: Read

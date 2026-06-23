@@ -1,0 +1,5 @@
+cases:
+  - id: gamma-case
+    prompt: "nested prompt"
+    assertions:
+      - called: Grep

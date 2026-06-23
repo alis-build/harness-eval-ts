@@ -1,0 +1,42 @@
+# Suite with a model matrix — same case run under different harness models.
+#
+# Replace allowedTools with your MCP tool names when testing tool-selection behavior.
+# This example keeps Read so it runs against this repo without extra MCP setup.
+#
+# Run:
+#   harness-eval run examples/matrix.yaml --output .debug/report.json
+
+adapter: claude-code
+
+defaultConfig:
+  timeoutMs: 120000
+  cwd: ..
+  claudeCode:
+    isolateConfig: false
+    permissionMode: bypassPermissions
+    allowedTools:
+      - Read
+
+matrix:
+  - label: sonnet
+    axes:
+      model: claude-sonnet-4-6
+    config:
+      model: claude-sonnet-4-6
+
+  - label: opus
+    axes:
+      model: claude-opus-4-6
+    config:
+      model: claude-opus-4-6
+
+cases:
+  - id: count-sections
+    category: smoke
+    prompt: "Read README.md and tell me how many top-level sections it has (count the main headings)."
+    repetitions: 3
+    assertions:
+      - called: Read
+        threshold: 0.8
+      - not:
+          responded_without_tool_calls: true

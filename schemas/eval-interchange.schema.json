@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/alis-build/harness-eval-ts/main/schemas/eval-interchange.schema.json",
+  "title": "EvalDatasetRow",
+  "description": "Flattened row for tabular or JSONL dataset consumption.",
+  "type": "object",
+  "properties": {
+    "prompt": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "response": {
+      "$ref": "#/$defs/__schema2"
+    },
+    "reference": {
+      "$ref": "#/$defs/__schema4"
+    },
+    "predicted_trajectory": {
+      "$ref": "#/$defs/__schema6"
+    },
+    "reference_trajectory": {
+      "$ref": "#/$defs/__schema9"
+    },
+    "latency_in_seconds": {
+      "$ref": "#/$defs/__schema11"
+    },
+    "failure": {
+      "$ref": "#/$defs/__schema12"
+    },
+    "human_ratings": {
+      "$ref": "#/$defs/__schema15"
+    }
+  },
+  "required": [
+    "predicted_trajectory",
+    "latency_in_seconds",
+    "failure"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "description": "Eval prompt sent to the agent.",
+      "$ref": "#/$defs/__schema1"
+    },
+    "__schema1": {
+      "type": "string"
+    },
+    "__schema2": {
+      "description": "Final agent response text.",
+      "$ref": "#/$defs/__schema3"
+    },
+    "__schema3": {
+      "type": "string"
+    },
+    "__schema4": {
+      "description": "Reference answer text when provided.",
+      "$ref": "#/$defs/__schema5"
+    },
+    "__schema5": {
+      "type": "string"
+    },
+    "__schema6": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TabularToolCall"
+      },
+      "description": "Predicted tool-call trajectory with structured tool_input."
+    },
+    "TabularToolCall": {
+      "type": "object",
+      "properties": {
+        "tool_name": {
+          "$ref": "#/$defs/__schema7"
+        },
+        "tool_input": {
+          "$ref": "#/$defs/__schema8"
+        }
+      },
+      "required": [
+        "tool_name",
+        "tool_input"
+      ],
+      "additionalProperties": false,
+      "title": "TabularToolCall",
+      "description": "Tool call with structured tool_input for JSONL/tabular export."
+    },
+    "__schema7": {
+      "type": "string",
+      "description": "Tool name as emitted by the agent."
+    },
+    "__schema8": {
+      "description": "Tool arguments as a structured object for tabular consumption."
+    },
+    "__schema9": {
+      "description": "Reference tool-call trajectory when provided.",
+      "$ref": "#/$defs/__schema10"
+    },
+    "__schema10": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TabularToolCall"
+      }
+    },
+    "__schema11": {
+      "type": "number",
+      "description": "Session latency in seconds."
+    },
+    "__schema12": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/__schema13"
+        },
+        {
+          "$ref": "#/$defs/__schema14"
+        }
+      ],
+      "description": "1 when the harness run failed, 0 on success."
+    },
+    "__schema13": {
+      "type": "number",
+      "const": 0
+    },
+    "__schema14": {
+      "type": "number",
+      "const": 1
+    },
+    "__schema15": {
+      "description": "Human ratings keyed by metric name for judge calibration.",
+      "$ref": "#/$defs/__schema16"
+    },
+    "__schema16": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    }
+  }
+}

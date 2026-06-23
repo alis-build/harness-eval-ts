@@ -1,0 +1,7 @@
+- id: list-examples
+  category: smoke
+  prompt: "Use Read to inspect examples/basic.yaml and name the test case id defined there."
+  repetitions: 1
+  assertions:
+    - called: Read
+      threshold: 0.8

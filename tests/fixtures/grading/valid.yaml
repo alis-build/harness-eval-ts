@@ -1,0 +1,10 @@
+judge:
+  adapter: claude-code
+  model: claude-sonnet-4-6
+  timeoutMs: 90000
+  maxConcurrent: 3
+  env:
+    TEST_FLAG: "1"
+  claudeCode:
+    permissionMode: bypassPermissions
+    settings: ./judge-settings.json

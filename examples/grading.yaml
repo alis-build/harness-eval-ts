@@ -1,0 +1,18 @@
+# Grading config for outcome judges (`harness-eval grade`).
+#
+# Use with any report that includes expectations (copied from the suite at run time).
+# Built-in judge defaults (maxTurns: 1, bare, disableSlashCommands,
+# noSessionPersistence) apply unless overridden under judge.claudeCode.
+#
+# Example:
+#   harness-eval grade .debug/report.json \
+#     --config examples/grading.yaml \
+#     --output .debug/grading.json
+
+judge:
+  adapter: claude-code
+  model: claude-sonnet-4-6
+  timeoutMs: 300000
+  maxConcurrent: 2
+  claudeCode:
+    permissionMode: bypassPermissions

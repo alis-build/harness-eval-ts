@@ -1,0 +1,4 @@
+id: bad
+prompt: hi
+assertions:
+  - unknown_assertion: true

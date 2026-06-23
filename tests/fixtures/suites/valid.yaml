@@ -1,0 +1,24 @@
+adapter: claude-code
+defaultConfig:
+  model: claude-sonnet-4-6
+  timeoutMs: 60000
+  claudeCode:
+    permissionMode: bypassPermissions
+    allowedTools: [mcp__api__*, Read]
+
+matrix:
+  - label: "v1.2.0 / sonnet"
+    axes: { plugin: v1.2.0, model: claude-sonnet-4-6 }
+    config:
+      claudeCode:
+        pluginDirs: [./plugins/v1.2.0]
+
+cases:
+  - id: deploy-implicit
+    prompt: "deploy neuron to staging"
+    repetitions: 2
+    assertions:
+      - called: mcp__api__search_skills
+        threshold: 0.8
+      - not:
+          responded_without_tool_calls: true

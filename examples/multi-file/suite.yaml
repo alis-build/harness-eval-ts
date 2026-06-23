@@ -1,0 +1,22 @@
+# Multi-file suite example — shared config in suite.yaml, cases split across files.
+#
+# Run:
+#   harness-eval run examples/multi-file --output .debug/multi-file-report.json
+
+adapter: claude-code
+
+defaultConfig:
+  model: claude-sonnet-4-6
+  timeoutMs: 120000
+  cwd: ..
+  claudeCode:
+    isolateConfig: false
+    permissionMode: bypassPermissions
+    allowedTools:
+      - Read
+
+matrix:
+  - label: sonnet
+    axes:
+      model: claude-sonnet-4-6
+    config: {}

@@ -1,0 +1,44 @@
+# Minimal smoke suite — uses the built-in Read tool against this repo's README.
+#
+# Prereqs: `claude` on PATH; `claude login` (isolateConfig: false) or ANTHROPIC_API_KEY.
+#
+# Run:
+#   harness-eval run examples/basic.yaml --output .debug/report.json
+#
+# Grade (optional):
+#   harness-eval grade .debug/report.json \
+#     --config examples/grading.yaml \
+#     --output .debug/grading.json
+
+adapter: claude-code
+
+defaultConfig:
+  model: claude-sonnet-4-6
+  timeoutMs: 120000
+  cwd: ..
+  claudeCode:
+    isolateConfig: false
+    permissionMode: bypassPermissions
+    allowedTools:
+      - Read
+
+matrix:
+  - label: sonnet
+    axes:
+      model: claude-sonnet-4-6
+    config: {}
+
+cases:
+  - id: summarize-readme
+    category: smoke
+    notes: Agent should read README.md and answer from file contents.
+    prompt: "Read README.md and summarize what harness-eval does in one or two sentences."
+    repetitions: 3
+    expectations:
+      - "The response describes an eval framework for AI coding agent harnesses"
+      - "The summary is grounded in README content, not a generic refusal"
+    assertions:
+      - called: Read
+        threshold: 0.8
+      - not:
+          responded_without_tool_calls: true

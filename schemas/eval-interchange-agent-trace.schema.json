@@ -1,0 +1,322 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/alis-build/harness-eval-ts/main/schemas/eval-interchange.schema.json#AgentTrace",
+  "title": "AgentTrace",
+  "description": "Full multi-turn agent execution trace.",
+  "type": "object",
+  "properties": {
+    "agents": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "turns": {
+      "$ref": "#/$defs/__schema13"
+    }
+  },
+  "required": [
+    "agents",
+    "turns"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/__schema1"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/AgentConfig"
+      },
+      "description": "Agent configurations keyed by agent id."
+    },
+    "__schema1": {
+      "type": "string"
+    },
+    "AgentConfig": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "agent_type": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "description": {
+          "$ref": "#/$defs/__schema5"
+        },
+        "instruction": {
+          "$ref": "#/$defs/__schema7"
+        },
+        "tools": {
+          "$ref": "#/$defs/__schema9"
+        },
+        "sub_agents": {
+          "$ref": "#/$defs/__schema11"
+        }
+      },
+      "required": [
+        "agent_id"
+      ],
+      "additionalProperties": false,
+      "title": "AgentConfig",
+      "description": "Static configuration for one agent in a trace."
+    },
+    "__schema2": {
+      "type": "string",
+      "description": "Stable agent identifier."
+    },
+    "__schema3": {
+      "description": "Agent type or role.",
+      "$ref": "#/$defs/__schema4"
+    },
+    "__schema4": {
+      "type": "string"
+    },
+    "__schema5": {
+      "description": "Human-readable agent description.",
+      "$ref": "#/$defs/__schema6"
+    },
+    "__schema6": {
+      "type": "string"
+    },
+    "__schema7": {
+      "description": "System instruction for the agent.",
+      "$ref": "#/$defs/__schema8"
+    },
+    "__schema8": {
+      "type": "string"
+    },
+    "__schema9": {
+      "description": "Tools available to this agent.",
+      "$ref": "#/$defs/__schema10"
+    },
+    "__schema10": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Tool name."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema11": {
+      "description": "Sub-agent identifiers when using multi-agent setups.",
+      "$ref": "#/$defs/__schema12"
+    },
+    "__schema12": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "__schema13": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ConversationTurn"
+      },
+      "description": "Chronological conversation turns."
+    },
+    "ConversationTurn": {
+      "type": "object",
+      "properties": {
+        "turn_index": {
+          "$ref": "#/$defs/__schema14"
+        },
+        "turn_id": {
+          "$ref": "#/$defs/__schema15"
+        },
+        "events": {
+          "$ref": "#/$defs/__schema17"
+        }
+      },
+      "required": [
+        "turn_index",
+        "events"
+      ],
+      "additionalProperties": false,
+      "title": "ConversationTurn",
+      "description": "One turn in a multi-turn agent conversation."
+    },
+    "__schema14": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991,
+      "description": "Zero-based turn index."
+    },
+    "__schema15": {
+      "description": "Optional stable turn identifier.",
+      "$ref": "#/$defs/__schema16"
+    },
+    "__schema16": {
+      "type": "string"
+    },
+    "__schema17": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AgentEvent"
+      },
+      "description": "Events in chronological order."
+    },
+    "AgentEvent": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "$ref": "#/$defs/__schema18"
+        },
+        "content": {
+          "$ref": "#/$defs/__schema19"
+        },
+        "event_time": {
+          "$ref": "#/$defs/__schema27"
+        },
+        "state_delta": {
+          "$ref": "#/$defs/__schema29"
+        },
+        "active_tools": {
+          "$ref": "#/$defs/__schema31"
+        }
+      },
+      "required": [
+        "author",
+        "content"
+      ],
+      "additionalProperties": false,
+      "title": "AgentEvent",
+      "description": "One event in a multi-turn agent trace."
+    },
+    "__schema18": {
+      "type": "string",
+      "description": "Agent id or user identifier for this event."
+    },
+    "__schema19": {
+      "type": "object",
+      "properties": {
+        "parts": {
+          "$ref": "#/$defs/__schema20"
+        }
+      },
+      "required": [
+        "parts"
+      ],
+      "additionalProperties": false,
+      "description": "Structured event content."
+    },
+    "__schema20": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ContentPart"
+      },
+      "description": "Content parts for this event."
+    },
+    "ContentPart": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "$ref": "#/$defs/__schema21"
+        },
+        "function_call": {
+          "$ref": "#/$defs/__schema23"
+        },
+        "function_response": {
+          "$ref": "#/$defs/__schema25"
+        }
+      },
+      "additionalProperties": false,
+      "title": "ContentPart",
+      "description": "One part of agent event content (text, function_call, or function_response)."
+    },
+    "__schema21": {
+      "description": "Plain text content.",
+      "$ref": "#/$defs/__schema22"
+    },
+    "__schema22": {
+      "type": "string"
+    },
+    "__schema23": {
+      "description": "Function call emitted by the agent.",
+      "$ref": "#/$defs/__schema24"
+    },
+    "__schema24": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Function or tool name."
+        },
+        "args": {
+          "description": "Function arguments."
+        }
+      },
+      "required": [
+        "name",
+        "args"
+      ],
+      "additionalProperties": false
+    },
+    "__schema25": {
+      "description": "Function response from tool execution.",
+      "$ref": "#/$defs/__schema26"
+    },
+    "__schema26": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Function or tool name."
+        },
+        "response": {
+          "description": "Function result payload."
+        }
+      },
+      "required": [
+        "name",
+        "response"
+      ],
+      "additionalProperties": false
+    },
+    "__schema27": {
+      "description": "ISO 8601 timestamp when the event occurred.",
+      "$ref": "#/$defs/__schema28"
+    },
+    "__schema28": {
+      "type": "string"
+    },
+    "__schema29": {
+      "description": "Session state changes associated with this event.",
+      "$ref": "#/$defs/__schema30"
+    },
+    "__schema30": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema31": {
+      "description": "Tools available to the agent at event time.",
+      "$ref": "#/$defs/__schema32"
+    },
+    "__schema32": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Tool name."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}
