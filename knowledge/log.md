@@ -1,5 +1,14 @@
 # Knowledge Bundle Update Log
 
+## 2026-06-24 (unified suite config)
+
+* **Update**: [suite YAML reference](/knowledge/reference/suite-yaml.md) — inline `judge:` and `pipeline:` blocks, input resolution, auth notes.
+* **Update**: [CLI commands](/knowledge/reference/cli-commands.md) — `harness-eval pipeline`, `--suite` on `grade`.
+* **Update**: [data flow](/knowledge/architecture/data-flow.md) — `loadSuiteDocument`, `runPipeline`, `resolvePipelineInputs`.
+* **Update**: [library API](/knowledge/reference/library-api.md) — `loadSuiteDocument`, `runPipeline`, `resolvePipelineInputs`; fixed complete example.
+* **Update**: [getting started](/knowledge/guides/getting-started.md) — unified suite first; standalone `grading.yaml` as alternate.
+* **Update**: [CI/CD integration](/knowledge/guides/ci-cd-integration.md) — optional single `pipeline` job pattern.
+
 ## 2026-06-24
 
 * **Initialization**: Established the knowledge bundle for `@alis-build/harness-eval` v0.1.2.

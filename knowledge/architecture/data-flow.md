@@ -10,9 +10,11 @@ timestamp: 2026-06-24T00:00:00Z
 
 The harness-eval pipeline has five distinct stages. Each stage produces a well-defined data structure that the next stage consumes. Stages 1–3 are always executed; stages 4–5 are optional.
 
+When a suite defines a **`pipeline:`** block, **`harness-eval pipeline`** (or **`runPipeline()`**) orchestrates these stages with shared artifact paths. Otherwise, invoke each CLI command separately.
+
 ```
 Stage 1: Load
-  Suite YAML ──── loadSuite() ──────────────────────────────► TestSuite
+  Suite YAML ──── loadSuiteDocument() / loadSuite() ────────► TestSuite (+ judge, pipeline metadata)
 
 Stage 2: Run
   TestSuite ───── runSuite() ──── HarnessAdapter ──────────► SuiteReport
@@ -40,14 +42,21 @@ Stage 4: Grade  [optional]
 Stage 5: Envelope  [optional]
   SuiteReport ─── buildEvalRunEnvelope() ───────────────────► EvalRunEnvelope
   + GradingReport                                              (versioned, for DB / CI)
+
+Pipeline orchestrator (optional)
+  suite.yaml ─── runPipeline() ─── run → grade → envelope ──► artifact paths on disk
+                   │ uses resolvePipelineInputs() for path precedence
+                   └── stops on first failing step
 ```
 
 # Stage 1 — Load
 
-`loadSuite(path)` reads a [Suite YAML](/reference/suite-yaml.md) and returns a `TestSuite`. This involves:
+`loadSuite(path)` reads a [Suite YAML](/reference/suite-yaml.md) and returns a `TestSuite`. For unified suite files with optional inline **`judge:`** and **`pipeline:`** blocks, use **`loadSuiteDocument(path)`**, which returns `{ suite, judge?, pipeline?, suitePath }`.
+
+This involves:
 
 1. Parsing YAML with the `yaml` library.
-2. Validating the parsed object with the Zod schema (`src/config/schema.ts`).
+2. Validating the parsed object with the Zod schema (`src/config/schema.ts` / `src/config/suite-file-schema.ts`).
 3. Resolving config inheritance: `defaultConfig` → `case.config` → `cell.config` (later wins; lists replace, not merge).
 4. Transforming raw YAML assertions into typed `Assertion` objects (`src/config/transform.ts`).
 
@@ -104,6 +113,18 @@ The `--output <path>` flag writes the full `SuiteReport` JSON regardless of `--f
 
 The envelope is the stable data contract for storage in a database, CI artifact comparison, or API responses. It is self-describing: it carries a `schemaVersion` and references the published JSON Schema.
 
+# Pipeline orchestration (optional)
+
+When a suite YAML includes a **`pipeline:`** block, **`runPipeline(doc, options)`** (`src/pipeline/run-pipeline.ts`) executes configured steps in order:
+
+1. **run** — `runSuite()` → writes `pipeline.run.output`
+2. **grade** — `gradeReport()` using inline `judge:` → writes `pipeline.grade.output`
+3. **envelope** — `buildEvalRunEnvelopeFromFiles()` → writes `pipeline.envelope.output`
+
+**`resolvePipelineInputs()`** (`src/pipeline/resolve-inputs.ts`) resolves artifact paths with precedence: CLI overrides > explicit YAML > prior step output in this run > default path if file exists.
+
+CLI equivalent: `harness-eval pipeline <suite.yaml|dir> [--steps run,grade,envelope]`.
+
 # Five data layers
 
 | Layer | Type | Produced by | Used by |
@@ -118,7 +139,10 @@ The envelope is the stable data contract for storage in a database, CI artifact 
 
 | File | Responsibility |
 |------|---------------|
-| `src/config/loader.ts` | `loadSuite()` — YAML → TestSuite |
+| `src/config/loader.ts` | `loadSuite()`, `loadSuiteDocument()` — YAML → TestSuite |
+| `src/config/suite-document-loader.ts` | Unified suite document loading |
+| `src/pipeline/run-pipeline.ts` | `runPipeline()` — orchestrate run → grade → envelope |
+| `src/pipeline/resolve-inputs.ts` | `resolvePipelineInputs()` — artifact path resolution |
 | `src/runner/suite.ts` | `runSuite()` — fan-out orchestrator |
 | `src/runner/case.ts` | Single repetition execution |
 | `src/runner/limit.ts` | Concurrency pool |

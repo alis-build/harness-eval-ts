@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     index: "src/index.ts",
     "adapters/claude-code/index": "src/adapters/claude-code/index.ts",
+    "adapters/codex/index": "src/adapters/codex/index.ts",
     "runner/suite": "src/runner/suite.ts",
     "config/loader": "src/config/loader.ts",
     "cli/bin": "src/cli/bin.ts",

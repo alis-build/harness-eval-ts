@@ -1,0 +1,6 @@
+{"type":"thread.started","thread_id":"th_codex_bash"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_1","type":"command_execution","command":"bash -lc ls","status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"command_execution","command":"bash -lc ls","exit_code":0,"aggregated_output":"README.md\nsrc\n","status":"completed"}}
+{"type":"item.completed","item":{"id":"item_2","type":"assistant_message","text":"The repo contains README.md and src."}}
+{"type":"turn.completed","usage":{"input_tokens":90,"cached_input_tokens":0,"output_tokens":30,"reasoning_output_tokens":0}}

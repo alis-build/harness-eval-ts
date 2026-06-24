@@ -1,0 +1,6 @@
+{"type":"thread.started","thread_id":"th_codex_read_smoke"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_1","type":"mcp_tool_call","server":"filesystem","tool":"read","arguments":{"path":"README.md"},"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"mcp_tool_call","server":"filesystem","tool":"read","arguments":{"path":"README.md"},"result":{"content":[{"type":"text","text":"# harness-eval\n\nStatistical eval framework for AI coding agent harnesses."}]},"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_2","type":"assistant_message","text":"harness-eval is a statistical eval framework for AI coding agent harnesses."}}
+{"type":"turn.completed","usage":{"input_tokens":120,"cached_input_tokens":80,"output_tokens":45,"reasoning_output_tokens":0}}

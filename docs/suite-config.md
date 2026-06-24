@@ -106,6 +106,7 @@ List fields such as `allowedTools` and `pluginDirs` are **replaced**, not merged
 | `timeoutMs` | Hard timeout per repetition (adapter kills the process group after this). |
 | `env` | Extra environment variables (`KEY: value` strings). |
 | `claudeCode` | Claude Code adapter options — see [README](../README.md#claude-code-adapter). |
+| `codex` | Codex CLI adapter options — see [README](../README.md#codex-cli-adapter). |
 
 ---
 
@@ -174,13 +175,72 @@ Harness crashes and timeouts are excluded from pass-rate denominators and counte
 
 ---
 
+## Inline judge in `suite.yaml`
+
+You may colocate grading config in the same file as the suite (one file per harness target):
+
+```yaml
+judge:
+  adapter: claude-code
+  model: claude-sonnet-4-6
+  maxConcurrent: 2
+  claudeCode:
+    permissionMode: bypassPermissions
+```
+
+Use with:
+
+```bash
+harness-eval grade report.json --suite my-suite/suite.yaml
+```
+
+Standalone `grading.yaml` remains supported (`--config`). See [Grading config](#grading-config-gradingyaml) for all `judge` fields.
+
+---
+
+## Pipeline orchestration (`pipeline:`)
+
+Optional block to drive **`harness-eval pipeline`** — run → grade → envelope with implicit I/O chaining:
+
+```yaml
+pipeline:
+  run:
+    output: report.json
+  grade:
+    input: report.json      # optional; defaults from run output
+    output: grading.json
+  envelope:
+    report: report.json     # optional
+    grading: grading.json   # optional; omit for behavioral-only envelope
+    output: envelope.json
+    projection: envelope    # envelope | trajectory | instances
+```
+
+**Step enablement:** a step runs only if its key is present under `pipeline`.
+
+**Input resolution:** CLI flags > explicit YAML paths > prior step output in this run > configured default path if file exists on disk.
+
+```bash
+harness-eval pipeline my-suite/
+harness-eval pipeline my-suite/ --steps run,grade
+harness-eval pipeline my-suite/ --steps envelope   # reuse existing artifacts
+```
+
+When `pipeline` is omitted, use `run`, `grade`, and `envelope` separately (unchanged).
+
+**Envelope grading fallback:** when running `harness-eval envelope` with `--suite` and without `--grading`, the CLI resolves a grading artifact from the suite's `pipeline:` block — first `pipeline.envelope.grading`, then `pipeline.grade.output` if that file exists beside `suite.yaml`.
+
+Example: [examples/pipeline/](../examples/pipeline/).
+
+---
+
 ## Grading config (`grading.yaml`)
 
 Outcome grading uses a **separate file** from the suite. Point `harness-eval grade` at it with `--config`.
 
 ```yaml
 judge:
-  adapter: claude-code
+  adapter: claude-code   # or codex
   model: claude-sonnet-4-6
   timeoutMs: 300000
   maxConcurrent: 2
@@ -191,9 +251,23 @@ judge:
     permissionMode: bypassPermissions
 ```
 
+**Codex judge example:**
+
+```yaml
+judge:
+  adapter: codex
+  model: gpt-5.4
+  codex:
+    ephemeral: true
+    ignoreUserConfig: true
+    askForApproval: never
+```
+
+See [examples/codex-grading.yaml](../examples/codex-grading.yaml).
+
 | Field | Description |
 |-------|-------------|
-| `judge.adapter` | Judge harness (default: `claude-code`). |
+| `judge.adapter` | Judge harness (default: `claude-code`). Supported: `claude-code`, `codex`. |
 | `judge.model` | Model for the judge subprocess. |
 | `judge.timeoutMs` | Per-expectation batch timeout. |
 | `judge.maxConcurrent` | Parallel judge processes (default: **2** when unset). |
@@ -201,8 +275,11 @@ judge:
 | `judge.env` | Environment for the judge process. |
 | `judge.cwd` | Working directory for the judge. |
 | `judge.claudeCode` | Same options as suite `claudeCode` — see [README](../README.md#claude-code-adapter). |
+| `judge.codex` | Same options as suite `codex` — see [README](../README.md#codex-cli-adapter). |
 
-**Built-in judge defaults** (unless overridden under `judge.claudeCode`): `maxTurns: 1`, `bare: true`, `disableSlashCommands: true`, `noSessionPersistence: true`, `permissionMode: bypassPermissions`. These keep grading fast and isolated from plugins/MCP.
+**Built-in Claude judge defaults** (unless overridden under `judge.claudeCode`): `maxTurns: 1`, `bare: true`, `disableSlashCommands: true`, `noSessionPersistence: true`, `permissionMode: bypassPermissions`. These keep grading fast and isolated from plugins/MCP.
+
+**Built-in Codex judge defaults** (unless overridden under `judge.codex`): `ephemeral: true`, `ignoreUserConfig: true`, `skipGitRepoCheck: true`, `askForApproval: never`.
 
 **Expectations source:** copied from the suite into `report.json` at `run` time. Use `--expectations` on the CLI only when the report lacks them.
 

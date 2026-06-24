@@ -1,0 +1,53 @@
+# Unified suite example — inline judge + pipeline orchestration
+#
+# Run full pipeline (run → grade → envelope):
+#   harness-eval pipeline examples/pipeline/
+#
+# Or run steps independently:
+#   harness-eval run examples/pipeline/suite.yaml --output .debug/pipeline-report.json
+#   harness-eval grade .debug/pipeline-report.json --suite examples/pipeline/suite.yaml
+
+adapter: claude-code
+
+defaultConfig:
+  model: claude-sonnet-4-6
+  timeoutMs: 120000
+  cwd: ..
+  claudeCode:
+    isolateConfig: false
+    permissionMode: bypassPermissions
+    allowedTools:
+      - Read
+
+matrix:
+  - label: sonnet
+    axes:
+      model: claude-sonnet-4-6
+    config: {}
+
+cases:
+  - id: summarize-readme
+    category: smoke
+    prompt: "Read README.md and summarize what harness-eval does in one sentence."
+    repetitions: 1
+    expectations:
+      - "The response describes an eval framework for AI coding agent harnesses"
+    assertions:
+      - called: Read
+        threshold: 0.8
+
+judge:
+  adapter: claude-code
+  model: claude-sonnet-4-6
+  timeoutMs: 300000
+  maxConcurrent: 1
+  claudeCode:
+    permissionMode: bypassPermissions
+
+pipeline:
+  run:
+    output: .debug/pipeline-report.json
+  grade:
+    output: .debug/pipeline-grading.json
+  envelope:
+    output: .debug/pipeline-envelope.json

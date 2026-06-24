@@ -1,0 +1,45 @@
+# Minimal Codex smoke suite — reads README via shell (Codex maps command_execution → Bash).
+#
+# Prereqs: `codex` on PATH; Codex login in ~/.codex or OPENAI_API_KEY when isolateConfig: true.
+#
+# Unified layout: add judge: + pipeline: to suite.yaml (see examples/pipeline/).
+#
+# Run:
+#   harness-eval run examples/codex-basic.yaml --output .debug/codex-report.json
+#
+# Grade with Codex judge (optional — standalone codex-grading.yaml):
+#   harness-eval grade .debug/codex-report.json \
+#     --config examples/codex-grading.yaml \
+#     --output .debug/codex-grading.json
+
+adapter: codex
+
+defaultConfig:
+  model: gpt-5.4
+  timeoutMs: 120000
+  cwd: ..
+  codex:
+    isolateConfig: false
+    sandbox: workspace-write
+    askForApproval: never
+
+matrix:
+  - label: default
+    axes:
+      model: gpt-5.4
+    config: {}
+
+cases:
+  - id: summarize-readme
+    category: smoke
+    notes: Codex typically reads files via command_execution (mapped to Bash), not a Read MCP tool.
+    prompt: "Read README.md and summarize what harness-eval does in one or two sentences."
+    repetitions: 3
+    expectations:
+      - "The response describes an eval framework for AI coding agent harnesses"
+      - "The summary is grounded in README content, not a generic refusal"
+    assertions:
+      - called: Bash
+        threshold: 0.8
+      - not:
+          responded_without_tool_calls: true

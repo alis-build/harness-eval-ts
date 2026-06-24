@@ -54,10 +54,11 @@ pnpm exec harness-eval --help
 
 Suites are YAML files. Committed examples:
 
-- [`examples/basic.yaml`](examples/basic.yaml) — smoke test using the built-in `Read` tool on this repo's README
+- [`examples/pipeline/`](examples/pipeline/) — **recommended** unified layout with inline `judge:` + `pipeline:` orchestration
+- [`examples/basic.yaml`](examples/basic.yaml) — minimal smoke test using the built-in `Read` tool on this repo's README
 - [`examples/matrix.yaml`](examples/matrix.yaml) — same idea with a model matrix (sonnet vs opus)
 - [`examples/multi-file/`](examples/multi-file/) — directory layout with `suite.yaml` plus cases under `cases/`
-- [`examples/grading.yaml`](examples/grading.yaml) — standalone judge config for `harness-eval grade`
+- [`examples/grading.yaml`](examples/grading.yaml) — standalone judge config (alternate to inline `judge:`)
 
 ```yaml
 adapter: claude-code
@@ -96,11 +97,15 @@ cases:
 
 Generic fields (`model`, `cwd`, `timeoutMs`, `env`) sit at the top level. Claude-specific options go under `claudeCode`.
 
-**Full suite & grading YAML reference:** [docs/suite-config.md](docs/suite-config.md) — all case/matrix fields, `reference_trajectory`, `human_ratings`, multi-file layout, and `grading.yaml` options.
+**Full suite & grading YAML reference:** [docs/suite-config.md](docs/suite-config.md) — all case/matrix fields, inline `judge:` / `pipeline:`, multi-file layout, and standalone `grading.yaml`.
 
 ### 2. Run behavioral eval
 
 ```bash
+# Unified pipeline (run + optional grade + envelope when pipeline: is defined)
+npx @alis-build/harness-eval pipeline examples/pipeline/
+
+# Or run harness only
 npx @alis-build/harness-eval run examples/basic.yaml --output report.json --max-concurrent 1 --format console
 ```
 
@@ -112,7 +117,14 @@ Exit code `0` = all cells passed all assertion thresholds.
 
 ### 3. Grade outcomes (optional)
 
-Judge model, timeout, env, and `claudeCode` flags live in a separate **`grading.yaml`** (not in the suite file). See [`examples/grading.yaml`](examples/grading.yaml).
+**Unified suite:** add a top-level `judge:` block in `suite.yaml` (see [`examples/pipeline/suite.yaml`](examples/pipeline/suite.yaml)), then:
+
+```bash
+npx @alis-build/harness-eval grade report.json --suite examples/pipeline/suite.yaml --output grading.json --max-concurrent 1 --format console
+# or: npx @alis-build/harness-eval pipeline examples/pipeline/ --steps grade
+```
+
+**Standalone grading file:** judge config in a separate **`grading.yaml`** (still supported). See [`examples/grading.yaml`](examples/grading.yaml).
 
 ```bash
 npx @alis-build/harness-eval grade report.json --config examples/grading.yaml --output grading.json --max-concurrent 1 --format console
@@ -401,6 +413,7 @@ Both layers use statistical thresholds: a case runs `repetitions` times per matr
 npx @alis-build/harness-eval run <suite.yaml> [options]
 npx @alis-build/harness-eval grade <report.json> [options]
 npx @alis-build/harness-eval envelope <report.json> [options]
+npx @alis-build/harness-eval pipeline <suite.yaml|dir> [options]
 npx @alis-build/harness-eval format <report.json> [options]
 npx @alis-build/harness-eval --help
 ```
@@ -422,7 +435,7 @@ npx @alis-build/harness-eval --help
 
 ### `grade`
 
-Uses a standalone **`grading.yaml`** for judge model, timeout, env, and `claudeCode` flags (Option B — separate from the suite file).
+Uses **`grading.yaml`** or an inline **`judge:`** block in `suite.yaml` (`--suite`).
 
 **Field reference:** [docs/suite-config.md — Grading config](docs/suite-config.md#grading-config-gradingyaml)
 
@@ -444,6 +457,7 @@ npx @alis-build/harness-eval grade report.json --config examples/grading.yaml --
 | Option                                 | Description                                                       |
 | -------------------------------------- | ----------------------------------------------------------------- |
 | `--config <path>`                      | Grading YAML (`judge` block) — model, env, timeout, `claudeCode`  |
+| `--suite <path>`                       | Unified `suite.yaml` with inline `judge:` (alternative to `--config`) |
 | `--output <path>`                      | Write grading JSON                                                |
 | `--expectations <path>`                | Sidecar YAML/JSON if report lacks expectations                    |
 | `--format console\|json`               | Output format                                                     |
@@ -484,6 +498,28 @@ npx @alis-build/harness-eval envelope report.json --projection instances --outpu
 | `--no-transcript`                                           | Omit judge transcript artifacts                           |
 
 Exit codes: `0` = envelope built and behavioral pass; `1` = built but behavioral failures; `2` = usage or file errors.
+
+### `pipeline`
+
+Orchestrate **run → grade → envelope** from a unified `suite.yaml` when a `pipeline:` block is present. See [docs/suite-config.md — Pipeline orchestration](docs/suite-config.md#pipeline-orchestration-pipeline).
+
+```bash
+npx @alis-build/harness-eval pipeline examples/pipeline/
+npx @alis-build/harness-eval pipeline my-suite/ --steps run,grade
+```
+
+| Option | Description |
+| ------ | ----------- |
+| `--steps run,grade,envelope` | Subset of configured steps (default: all configured) |
+| `--output <path>` | Override `pipeline.run.output` |
+| `--report <path>` | Override report input for grade/envelope |
+| `--grading <path>` | Override grading input for envelope |
+| `--grading-output <path>` | Override `pipeline.grade.output` |
+| `--envelope-output <path>` | Override `pipeline.envelope.output` |
+| `--projection envelope\|trajectory\|instances` | Envelope projection |
+| `--max-concurrent <n>` | Parallel harness/judge workers |
+
+Exit codes match the first failing step (`run`, `grade`, or `envelope`). Returns `2` when no `pipeline:` block exists.
 
 ### `format`
 
@@ -549,7 +585,7 @@ Define expected tool calls for Vertex trajectory metrics on the eval envelope. U
 
 ## Adding harness adapters
 
-Built-in adapters register at module load. Today only `claude-code` ships; additional harnesses (Codex, Gemini CLI, Antigravity CLI) plug in via the same pattern:
+Built-in adapters register at module load. **`claude-code`** and **`codex`** ship today; additional harnesses (Gemini CLI, Antigravity CLI) plug in via the same pattern:
 
 1. Implement `HarnessAdapter` under `src/adapters/<id>/` with a `run(config)` that returns a `TrajectoryView`.
 2. Add a nested config key on `SuiteConfig` (e.g. `codex: { ... }`) for harness-specific options.
@@ -564,7 +600,7 @@ import {
 } from "@alis-build/harness-eval";
 
 registerAdapter("my-harness", myAdapter);
-console.log(listAdapters()); // ["claude-code", "my-harness"]
+console.log(listAdapters()); // ["claude-code", "codex", "my-harness"]
 ```
 
 Duplicate registration throws so accidental overrides fail fast during startup or tests.
@@ -620,12 +656,55 @@ The adapter captures Claude’s stream-json output and builds a `TrajectoryView`
 
 ---
 
+## Codex CLI adapter
+
+Nested under `codex` in YAML (or flat in programmatic config). Maps to [Codex CLI reference](https://developers.openai.com/codex/cli/reference) (`codex exec` flags).
+
+The harness adapter invokes:
+
+```bash
+codex --ask-for-approval never exec --json [exec flags…] "<prompt>"
+```
+
+`--ask-for-approval` is a **global** flag (before `exec`); other options attach to the `exec` subcommand.
+
+| Field | CLI flag | Notes |
+| ----- | -------- | ----- |
+| `binary` | — | Default `codex` |
+| `model` | `--model` | Also settable at top level |
+| `profile` | `--profile` | Layer `$CODEX_HOME/<profile>.config.toml` |
+| `sandbox` | `--sandbox` | `read-only`, `workspace-write`, `danger-full-access` |
+| `addDirs` | `--add-dir` | Extra writable dirs (repeatable) |
+| `configOverrides` | `-c key=value` | Inline TOML overrides (repeatable) |
+| `askForApproval` | `--ask-for-approval` | Default `never` for non-interactive eval |
+| `dangerouslyBypassApprovalsAndSandbox` | `--yolo` | Hardened CI only |
+| `dangerouslyBypassHookTrust` | `--dangerously-bypass-hook-trust` | Automation with vetted hooks |
+| `ephemeral` | `--ephemeral` | No session rollout files |
+| `ignoreUserConfig` | `--ignore-user-config` | Skip `$CODEX_HOME/config.toml` |
+| `skipGitRepoCheck` | `--skip-git-repo-check` | Allow runs outside git repos |
+| `outputSchema` | `--output-schema` | JSON Schema for structured final output |
+| `outputLastMessage` | `--output-last-message` | Write final assistant message to file (auto temp path when `captureLastMessage` is true) |
+| `captureLastMessage` | — | Default `true`: auto `--output-last-message` and read into `finalResponse` if JSONL has no assistant text |
+| `isolateConfig` | — | `false` (default) = inherit `~/.codex`; `true` = temp `$CODEX_HOME` per run |
+
+Generic `cwd` sets the child process working directory (`--cd`). MCP tool calls in Codex `--json` output map to harness names `mcp__<server>__<tool>`; shell commands map to `Bash`.
+
+The adapter maps Codex JSONL events into the shared `StreamEvent` shape and feeds `TrajectoryBuilder`. Fixture-driven tests use committed recordings under `tests/fixtures/codex/` — CI does not require `codex` on `PATH`.
+
+**Example suite:** [examples/codex-basic.yaml](examples/codex-basic.yaml)
+
+**Codex judge:** set `judge.adapter: codex` and nest options under `judge.codex` in grading YAML (see [docs/suite-config.md](docs/suite-config.md)).
+
+---
+
 ## Library API
 
 ```typescript
 import {
   loadSuite,
+  loadSuiteDocument,
   runSuite,
+  runPipeline,
   gradeReport,
   buildEvalRunEnvelope,
   trajectoryToTranscript,
@@ -635,6 +714,11 @@ import {
 } from "@alis-build/harness-eval";
 import { loadGradingConfig } from "@alis-build/harness-eval/config";
 
+// Unified pipeline
+const doc = await loadSuiteDocument("./examples/pipeline/suite.yaml");
+const { exitCode } = await runPipeline(doc, { maxConcurrent: 2 });
+
+// Or step-by-step
 const suite = await loadSuite("./examples/basic.yaml");
 const report = await runSuite(suite, { maxConcurrent: 2 });
 
@@ -659,7 +743,7 @@ const envelope = buildEvalRunEnvelope(report, {
 });
 ```
 
-Subpath exports: `@alis-build/harness-eval/runner`, `@alis-build/harness-eval/config`, `@alis-build/harness-eval/adapters/claude-code`.
+Subpath exports: `@alis-build/harness-eval/runner`, `@alis-build/harness-eval/config`, `@alis-build/harness-eval/adapters/claude-code`, `@alis-build/harness-eval/adapters/codex`.
 
 ---
 

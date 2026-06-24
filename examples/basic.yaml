@@ -2,10 +2,12 @@
 #
 # Prereqs: `claude` on PATH; `claude login` (isolateConfig: false) or ANTHROPIC_API_KEY.
 #
+# Recommended unified layout: see examples/pipeline/ (inline judge: + pipeline:).
+#
 # Run:
 #   harness-eval run examples/basic.yaml --output .debug/report.json
 #
-# Grade (optional):
+# Grade (optional — standalone grading.yaml; or use --suite with inline judge:):
 #   harness-eval grade .debug/report.json \
 #     --config examples/grading.yaml \
 #     --output .debug/grading.json

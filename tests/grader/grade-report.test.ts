@@ -73,6 +73,10 @@ describe("gradeReport", () => {
     expect(grading.results[0].expectations[1].passed).toBe(false);
     expect(grading.summary.total).toBe(2);
     expect(grading.summary.passed).toBe(1);
+    expect(grading.judge).toEqual({
+      id: "harness-eval/claude-grader",
+      adapter: "claude-code",
+    });
   });
 
   it("skips cells without expectations", async () => {
@@ -80,5 +84,19 @@ describe("gradeReport", () => {
     report.cells[0].expectations = undefined;
     const grading = await gradeReport(report, { gradeFn: mockGrader });
     expect(grading.results.length).toBe(0);
+  });
+
+  it("records codex judge metadata when judgeAdapter is codex", async () => {
+    const grading = await gradeReport(makeReport(), {
+      gradeFn: mockGrader,
+      judgeAdapter: "codex",
+      model: "gpt-5.4",
+    });
+
+    expect(grading.judge).toEqual({
+      id: "harness-eval/codex-grader",
+      model: "gpt-5.4",
+      adapter: "codex",
+    });
   });
 });

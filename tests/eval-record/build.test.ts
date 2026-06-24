@@ -1,8 +1,13 @@
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import type { ClaudeCodeAdapterResult } from "../../src/adapters/claude-code/types";
 import {
   buildEvalRunEnvelope,
+  buildEvalRunEnvelopeFromFiles,
   EVAL_RUN_SCHEMA_VERSION,
   TRAJECTORY_SCHEMA_VERSION,
 } from "../../src/eval-record/index";
@@ -130,5 +135,111 @@ describe("buildEvalRunEnvelope", () => {
     });
 
     expect(envelope.cells[0].repetitions[0].artifacts).toBeUndefined();
+  });
+
+  it("loads harness adapter and judge from suite and grading files", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "harness-eval-envelope-meta-"));
+    const reportPath = join(dir, "report.json");
+    const gradingPath = join(dir, "grading.json");
+    const suitePath = join(dir, "suite.yaml");
+    const gradingYamlPath = join(dir, "grading.yaml");
+
+    await writeFile(
+      reportPath,
+      JSON.stringify(makeReport()),
+    );
+    await writeFile(
+      suitePath,
+      "adapter: codex\nmatrix:\n  - label: default\n    config: {}\n",
+    );
+    await mkdir(join(dir, "cases"));
+    await writeFile(
+      join(dir, "cases", "case.yaml"),
+      "id: list-landing-zones\nprompt: Please list my landing zones\nassertions:\n  - called: Bash\n",
+    );
+    await writeFile(
+      gradingYamlPath,
+      "judge:\n  adapter: codex\n  model: gpt-5.4\n",
+    );
+    await writeFile(
+      gradingPath,
+      JSON.stringify({
+        gradedAt: "2026-06-24T00:00:00.000Z",
+        sourceReport: reportPath,
+        gradingConfigPath: gradingYamlPath,
+        results: [
+          {
+            caseId: "list-landing-zones",
+            cellLabel: "sonnet",
+            repetitionIndex: 0,
+            prompt: "Please list my landing zones",
+            expectations: [
+              { text: "Response lists landing zones", passed: true, evidence: "yes" },
+            ],
+            summary: { passed: 1, failed: 0, total: 1, passRate: 1 },
+            durationMs: 1,
+          },
+        ],
+        summary: { passed: 1, failed: 0, total: 1, passRate: 1 },
+      }),
+    );
+
+    const envelope = await buildEvalRunEnvelopeFromFiles(reportPath, {
+      suitePath,
+      gradingPath,
+    });
+
+    expect(envelope.harness.adapter).toBe("codex");
+    expect(envelope.cells[0].repetitions[0].outcomeGrades?.judge).toEqual({
+      id: "harness-eval/codex-grader",
+      model: "gpt-5.4",
+      adapter: "codex",
+    });
+
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("uses judge embedded in grading.json when present", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "harness-eval-envelope-meta-"));
+    const reportPath = join(dir, "report.json");
+    const gradingPath = join(dir, "grading.json");
+
+    await writeFile(reportPath, JSON.stringify(makeReport()));
+    await writeFile(
+      gradingPath,
+      JSON.stringify({
+        gradedAt: "2026-06-24T00:00:00.000Z",
+        sourceReport: reportPath,
+        judge: {
+          id: "harness-eval/codex-grader",
+          model: "gpt-5.4",
+          adapter: "codex",
+        },
+        results: [
+          {
+            caseId: "list-landing-zones",
+            cellLabel: "sonnet",
+            repetitionIndex: 0,
+            prompt: "Please list my landing zones",
+            expectations: [
+              { text: "Response lists landing zones", passed: true, evidence: "yes" },
+            ],
+            summary: { passed: 1, failed: 0, total: 1, passRate: 1 },
+            durationMs: 1,
+          },
+        ],
+        summary: { passed: 1, failed: 0, total: 1, passRate: 1 },
+      }),
+    );
+
+    const envelope = await buildEvalRunEnvelopeFromFiles(reportPath, {
+      gradingPath,
+    });
+
+    expect(envelope.cells[0].repetitions[0].outcomeGrades?.judge.id).toBe(
+      "harness-eval/codex-grader",
+    );
+
+    await rm(dir, { recursive: true, force: true });
   });
 });

@@ -129,4 +129,65 @@ describe("envelopeCommand", () => {
 
     expect(code).toBe(2);
   });
+
+  it("resolves grading from suite pipeline when --grading omitted", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "harness-eval-envelope-suite-"));
+    const reportPath = join(dir, "report.json");
+    const gradingPath = join(dir, "grading.json");
+    const suitePath = join(dir, "suite.yaml");
+    const outputPath = join(dir, "envelope.json");
+
+    await writeFile(reportPath, JSON.stringify(makeReport()), "utf8");
+    await writeFile(
+      gradingPath,
+      JSON.stringify({
+        gradedAt: "2026-06-24T00:00:00.000Z",
+        sourceReport: reportPath,
+        results: [
+          {
+            caseId: "list-landing-zones",
+            cellLabel: "sonnet",
+            repetitionIndex: 0,
+            prompt: "Please list my landing zones",
+            expectations: [
+              { text: "lists zones", passed: true, evidence: "mock" },
+            ],
+            summary: { passed: 1, failed: 0, total: 1, passRate: 1 },
+            durationMs: 1,
+          },
+        ],
+        summary: { passed: 1, failed: 0, total: 1, passRate: 1 },
+      }),
+      "utf8",
+    );
+    await writeFile(
+      suitePath,
+      [
+        "adapter: claude-code",
+        "matrix:",
+        "  - label: sonnet",
+        "    config: {}",
+        "cases:",
+        "  - id: list-landing-zones",
+        "    prompt: Please list my landing zones",
+        "    assertions:",
+        "      - called: SearchSkills",
+        "pipeline:",
+        "  grade:",
+        "    output: grading.json",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const code = await envelopeCommand({
+      positional: [reportPath],
+      options: { suite: suitePath, output: outputPath },
+    });
+
+    expect(code).toBe(0);
+    const envelope = JSON.parse(await readFile(outputPath, "utf8")) as {
+      summary: { outcomePass?: boolean };
+    };
+    expect(envelope.summary.outcomePass).toBeDefined();
+  });
 });

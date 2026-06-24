@@ -1,0 +1,10 @@
+judge:
+  adapter: codex
+  model: gpt-5.4
+  timeoutMs: 300000
+  maxConcurrent: 2
+  system_instruction: "You are a strict evaluator. Cite evidence from the transcript."
+  codex:
+    ephemeral: true
+    ignoreUserConfig: true
+    askForApproval: never

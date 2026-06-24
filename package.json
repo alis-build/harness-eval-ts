@@ -27,6 +27,10 @@
             "types": "./dist/adapters/claude-code/index.d.ts",
             "import": "./dist/adapters/claude-code/index.js"
         },
+        "./adapters/codex": {
+            "types": "./dist/adapters/codex/index.d.ts",
+            "import": "./dist/adapters/codex/index.js"
+        },
         "./runner": {
             "types": "./dist/runner/suite.d.ts",
             "import": "./dist/runner/suite.js"
@@ -72,5 +76,5 @@
     "publishConfig": {
         "access": "public"
     },
-    "packageManager": "pnpm@11.3.0"
+    "packageManager": "pnpm@11.8.0"
 }

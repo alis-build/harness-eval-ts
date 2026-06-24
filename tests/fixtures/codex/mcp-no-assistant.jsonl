@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"th_codex_mcp_no_assistant"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_1","type":"mcp_tool_call","server":"alis-build","tool":"ListLandingZones","arguments":{},"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"mcp_tool_call","server":"alis-build","tool":"ListLandingZones","arguments":{},"result":{"landing_zones":[{"id":"aibake","status":"ACTIVE"},{"id":"alis","status":"FAILED"}]},"status":"completed"}}
+{"type":"turn.completed","usage":{"input_tokens":40000,"cached_input_tokens":0,"output_tokens":300,"reasoning_output_tokens":0}}

@@ -2,13 +2,13 @@
 type: Architecture
 title: Harness Adapter Pattern
 description: How pluggable harness adapters decouple evaluation logic from vendor-specific subprocess management and stream parsing.
-tags: [architecture, adapters, claude-code, extensibility]
+tags: [architecture, adapters, claude-code, codex, extensibility]
 timestamp: 2026-06-24T00:00:00Z
 ---
 
 # Purpose
 
-Different AI coding harnesses (Claude Code, Cursor, Gemini CLI) each have their own subprocess protocol, output format, and configuration API. If assertions and judges operated on raw vendor output, every new harness would require rewriting the entire evaluation layer.
+Different AI coding harnesses (Claude Code, Codex, Cursor, Gemini CLI) each have their own subprocess protocol, output format, and configuration API. If assertions and judges operated on raw vendor output, every new harness would require rewriting the entire evaluation layer.
 
 The adapter pattern solves this by inserting a translation layer between vendor output and the normalized [`TrajectoryView`](./concepts/trajectory-view.md):
 
@@ -47,17 +47,18 @@ Adapters are registered by ID:
 
 ```typescript
 // src/adapters/registry.ts
-registerAdapter("claude-code", new ClaudeCodeAdapter());
+registerBuiltIn("claude-code", claudeCodeAdapter);
+registerBuiltIn("codex", codexAdapter);
 
 // Retrieval
 const adapter = getAdapter(suite.adapter ?? "claude-code");
 ```
 
-The `adapter` field in the suite YAML selects which adapter `runSuite` uses. Defaults to `"claude-code"`.
+The `adapter` field in the suite YAML selects which adapter `runSuite` uses. Defaults to `"claude-code"`. Built-in ids: `claude-code`, `codex`.
 
 # Claude Code adapter
 
-The only built-in adapter. Source: `src/adapters/claude-code/`.
+Built-in adapter. Source: `src/adapters/claude-code/`.
 
 **Subprocess protocol:**
 
@@ -85,6 +86,24 @@ The only built-in adapter. Source: `src/adapters/claude-code/`.
 **Isolation modes:** `isolateConfig: true` (default) runs with a fresh Claude config directory, preventing cross-test state leakage. `isolateConfig: false` uses the current user's logged-in Claude config — useful for MCP server tests that require an authenticated plugin.
 
 See [Claude Code adapter reference](../reference/claude-code-adapter.md) for the complete field list.
+
+# Codex CLI adapter
+
+Built-in adapter. Source: `src/adapters/codex/`.
+
+**Subprocess protocol:**
+
+1. Builds CLI flags from resolved config via `src/adapters/codex/flags.ts`.
+2. Always appends: `exec --json … "<prompt>"` with default `--ask-for-approval never`.
+3. Spawns the `codex` binary (configurable via `codex.binary`).
+4. Reads stdout line-by-line; each line is a Codex thread event.
+5. Maps events to `StreamEvent` via `CodexEventMapper`.
+6. Passes mapped events to `TrajectoryBuilder`.
+7. On process exit (or timeout), finalizes the `TrajectoryView`.
+
+**Isolation:** `isolateConfig: false` (default) inherits `~/.codex`. `isolateConfig: true` uses a temp `$CODEX_HOME` per run.
+
+See [Codex CLI adapter reference](../reference/codex-adapter.md) for the complete field list.
 
 # TrajectoryBuilder
 

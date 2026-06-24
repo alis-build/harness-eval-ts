@@ -8,19 +8,24 @@ timestamp: 2026-06-24T00:00:00Z
 
 # Overview
 
-A suite YAML file is the primary input to `harness-eval run`. It defines:
+A suite YAML file is the primary input to `harness-eval run` and `harness-eval pipeline`. It defines:
 
 - Which harness adapter to use
 - Default harness configuration
 - A matrix of configuration variants
 - Test cases with prompts, assertions, and expectations
+- Optionally: inline **`judge:`** (outcome grading config) and **`pipeline:`** (orchestration)
+
+Use **one `suite.yaml` per harness target** (e.g. separate files for Claude Code vs Codex when tool names differ).
 
 ```yaml
 # Top-level keys
 adapter: claude-code          # Optional; default "claude-code"
 defaultConfig: { ... }        # Optional; base config for all cases/cells
 matrix: [ ... ]               # Optional; list of configuration cells
-cases: [ ... ]                # Required; test cases
+cases: [ ... ]                # Required (or cases/ directory)
+judge: { ... }                # Optional; inline grading config
+pipeline: { ... }             # Optional; run → grade → envelope orchestration
 ```
 
 # Top-level fields
@@ -220,6 +225,64 @@ See `examples/multi-file/` for a working example.
 
 ---
 
+# Inline judge (`judge:`)
+
+Optional top-level block with the same shape as standalone `grading.yaml`. Colocates outcome-judge config with the suite (one file per harness).
+
+```yaml
+judge:
+  adapter: claude-code
+  model: claude-sonnet-4-6
+  timeoutMs: 300000
+  maxConcurrent: 2
+  system_instruction: "You are a strict evaluator."
+  claudeCode:
+    permissionMode: bypassPermissions
+```
+
+Use with:
+
+```bash
+harness-eval grade report.json --suite my-suite/suite.yaml
+```
+
+Standalone `grading.yaml` remains supported via `grade --config`. See [docs/suite-config.md](https://github.com/alis-build/harness-eval/blob/main/docs/suite-config.md) for all `judge` fields.
+
+**Auth note:** When the harness uses Vertex or logged-in config (`isolateConfig: false`), the judge block should mirror the same `env` / `claudeCode` settings — otherwise grading may fail while behavioral run passes.
+
+---
+
+# Pipeline orchestration (`pipeline:`)
+
+Optional block enabling **`harness-eval pipeline`**. Step presence under `pipeline` enables that step.
+
+```yaml
+pipeline:
+  run:
+    output: report.json
+    maxConcurrent: 4
+  grade:
+    input: report.json      # optional; implicit from run output
+    output: grading.json
+  envelope:
+    report: report.json     # optional
+    grading: grading.json   # optional; omit for behavioral-only envelope
+    output: envelope.json
+    projection: envelope    # envelope | trajectory | instances
+```
+
+**Input resolution:** CLI flags > explicit YAML paths > prior step output in this run > configured default path if file exists on disk.
+
+```bash
+harness-eval pipeline my-suite/
+harness-eval pipeline my-suite/ --steps run,grade
+harness-eval pipeline my-suite/ --steps envelope   # reuse existing artifacts
+```
+
+When `pipeline` is omitted, use `run`, `grade`, and `envelope` separately. See [CLI commands — pipeline](/reference/cli-commands.md#harness-eval-pipeline) and [examples/pipeline/](https://github.com/alis-build/harness-eval/tree/main/examples/pipeline).
+
+---
+
 # Full example
 
 ```yaml
@@ -273,8 +336,10 @@ cases:
 # Citations
 
 [1] `src/config/schema.ts` — Zod schema validating suite YAML
-[2] `src/config/loader.ts` — loadSuite() implementation
-[3] `src/config/resolve-config.ts` — config merge logic
-[4] `docs/suite-config.md` — official suite configuration reference
-[5] `examples/basic.yaml` — minimal example
-[6] `examples/matrix.yaml` — multi-cell matrix example
+[2] `src/config/loader.ts` — loadSuite(), loadSuiteDocument()
+[3] `src/config/suite-document-loader.ts` — unified suite file loading
+[4] `src/config/resolve-config.ts` — config merge logic
+[5] `docs/suite-config.md` — official suite configuration reference
+[6] `examples/basic.yaml` — minimal example
+[7] `examples/pipeline/` — unified judge + pipeline example
+[8] `examples/matrix.yaml` — multi-cell matrix example

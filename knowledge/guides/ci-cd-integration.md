@@ -8,7 +8,20 @@ timestamp: 2026-06-24T00:00:00Z
 
 # Recommended split
 
-harness-eval is designed for a two-job CI pattern:
+harness-eval supports two CI patterns:
+
+**Pattern A — unified pipeline (single job, when suite defines `pipeline:`):**
+
+```
+PR opened / push
+    │
+    └── Job: Full eval pipeline
+          harness-eval pipeline → run + grade + envelope
+          → writes report.json, grading.json, envelope.json
+          → behavioral failures exit 1; grade failures exit 1
+```
+
+**Pattern B — split jobs (default for large suites or async grading):**
 
 ```
 PR opened / push
@@ -23,7 +36,33 @@ PR opened / push
           → merged into EvalRunEnvelope for DB storage
 ```
 
-Job 1 runs in ~minutes (depending on harness latency and `--max-concurrent`). Job 2 can run after the PR merges, or on a nightly schedule. Only Job 1 blocks the PR.
+Job 1 (or the run step in Pattern A) blocks the PR. Job 2 can run after the PR merges, or on a nightly schedule.
+
+# GitHub Actions — Unified pipeline job
+
+When your suite includes inline `judge:` and `pipeline:` blocks:
+
+```yaml
+      - name: Run full eval pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          npx harness-eval pipeline eval/ \
+            --progress json \
+            --max-concurrent 3
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: harness-eval-artifacts
+          path: |
+            eval/report.json
+            eval/grading.json
+            eval/envelope.json
+```
+
+Use `--steps run` to gate only on behavioral assertions while skipping grade/envelope.
 
 # GitHub Actions — Behavioral eval job
 
@@ -128,9 +167,10 @@ The diff output shows ↑/↓ changes in pass rates per assertion.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           npx harness-eval grade report.json \
-            --config eval/grading.yaml \
+            --suite eval/suite.yaml \
             --output eval/grading.json \
             --max-concurrent 2
+          # alternate: --config eval/grading.yaml when using standalone grading file
 
       - name: Build EvalRunEnvelope
         run: |
@@ -187,8 +227,9 @@ Use exit codes for CI gating:
 
 | Scenario | Command | Exit code on failure |
 |----------|---------|---------------------|
-| Block PR on behavioral failures | `harness-eval run` | `1` |
-| Block PR on outcome failures | `harness-eval grade` | `1` |
+| Block PR on behavioral failures | `harness-eval run` or `pipeline --steps run` | `1` |
+| Block PR on outcome failures | `harness-eval grade` or full `pipeline` | `1` |
+| Full pipeline (run + grade + envelope) | `harness-eval pipeline` | `1` on first failing step |
 | Build envelope (never gates) | `harness-eval envelope` | `2` (fatal only) |
 
 ```yaml
@@ -209,3 +250,5 @@ The `claude` binary and `node_modules` should be cached between runs. Use `actio
 [3] `src/cli/commands/envelope.ts` — envelope command
 [4] `src/eval-record/build.ts` — buildEvalRunEnvelope with provenance
 [5] `examples/basic.yaml` — example suite
+[6] `examples/pipeline/` — unified pipeline example
+[7] `src/cli/commands/pipeline.ts` — pipeline command

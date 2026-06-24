@@ -1,0 +1,29 @@
+adapter: claude-code
+defaultConfig:
+  model: claude-sonnet-4-6
+  timeoutMs: 60000
+
+matrix:
+  - label: sonnet
+    config: {}
+
+cases:
+  - id: smoke
+    prompt: "Say hello"
+    repetitions: 1
+    assertions:
+      - not:
+          responded_without_tool_calls: true
+
+judge:
+  adapter: claude-code
+  model: claude-sonnet-4-6
+  maxConcurrent: 1
+
+pipeline:
+  run:
+    output: report.json
+  grade:
+    output: grading.json
+  envelope:
+    output: envelope.json

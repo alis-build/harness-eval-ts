@@ -13,6 +13,7 @@ import { ... } from "@alis-build/harness-eval";               // main API
 import { ... } from "@alis-build/harness-eval/runner";         // runner internals
 import { ... } from "@alis-build/harness-eval/config";         // config loading
 import { ... } from "@alis-build/harness-eval/adapters/claude-code"; // Claude types
+import { ... } from "@alis-build/harness-eval/adapters/codex";      // Codex types
 ```
 
 ---
@@ -28,6 +29,20 @@ const suite: TestSuite = await loadSuite("./examples/basic.yaml");
 ```
 
 Reads, validates, and transforms a suite YAML into a `TestSuite` runtime object. Throws if the YAML is invalid or missing required fields.
+
+## loadSuiteDocument
+
+```typescript
+import { loadSuiteDocument } from "@alis-build/harness-eval";
+
+const doc = await loadSuiteDocument("./examples/pipeline/suite.yaml");
+// doc.suite — TestSuite
+// doc.judge? — inline grading config (same shape as grading.yaml)
+// doc.pipeline? — run / grade / envelope artifact paths
+// doc.suitePath — resolved path to the suite file
+```
+
+Use when a single `suite.yaml` colocates harness config, optional inline **`judge:`**, and optional **`pipeline:`** orchestration. `loadSuite(path)` remains valid for harness-only YAML (ignores `judge` / `pipeline` blocks).
 
 **Options:**
 
@@ -60,8 +75,70 @@ const report = await runSuite(suite, {
   onProgress: (e) => console.error(e.type, e.label ?? ""),
 });
 
-console.log(`Passed: ${report.summary.cellsPassed}/${report.summary.cellsTotal}`);
+console.log(`Cells: ${report.cells.length}, all passed: ${report.cells.every((c) => c.passed)}`);
 ```
+
+---
+
+# Pipeline orchestration
+
+## runPipeline
+
+```typescript
+import { loadSuiteDocument, runPipeline } from "@alis-build/harness-eval";
+
+const doc = await loadSuiteDocument("./my-suite/suite.yaml");
+const result = await runPipeline(doc, {
+  steps?: "run,grade,envelope";  // default: all configured steps
+  maxConcurrent?: number;
+  overrides?: {
+    run?: { output?: string; maxConcurrent?: number };
+    grade?: { input?: string; output?: string; maxConcurrent?: number };
+    envelope?: {
+      report?: string;
+      grading?: string;
+      output?: string;
+      projection?: "envelope" | "trajectory" | "instances";
+    };
+  };
+  onRunProgress?: ProgressCallback;
+  onGradeProgress?: GradeProgressCallback;
+});
+
+// result.exitCode — 0 when all executed steps passed
+// result.stepsRun — ["run", "grade", "envelope"]
+// result.runReport — SuiteReport when run step executed
+```
+
+Requires a `pipeline:` block on the suite document. Stops on the first failing step.
+
+## resolvePipelineInputs
+
+```typescript
+import { resolvePipelineInputs } from "@alis-build/harness-eval";
+
+const resolved = await resolvePipelineInputs({
+  suitePath: doc.suitePath,
+  suiteDir: dirname(doc.suitePath),
+  pipeline: doc.pipeline!,
+  steps: ["grade"],
+  executed: { run: { output: "./report.json" } },
+  overrides: { grade: { input: "./custom-report.json" } },
+});
+```
+
+Low-level helper for artifact path resolution (CLI flags > YAML > prior step output > existing default path).
+
+## resolveGradingArtifactFromSuite
+
+```typescript
+import { resolveGradingArtifactFromSuite } from "@alis-build/harness-eval";
+
+const gradingPath = await resolveGradingArtifactFromSuite("./my-suite/suite.yaml");
+// undefined when no pipeline block or grading file missing on disk
+```
+
+Resolves a grading JSON path from a unified suite's `pipeline.envelope.grading` or default `pipeline.grade.output` when the file exists. Used by `harness-eval envelope --suite` when `--grading` is omitted.
 
 ---
 
@@ -269,6 +346,18 @@ import type {
 
 # Complete example
 
+**Unified suite (recommended):**
+
+```typescript
+import { loadSuiteDocument, runPipeline } from "@alis-build/harness-eval";
+
+const doc = await loadSuiteDocument("./my-suite/suite.yaml");
+const { exitCode } = await runPipeline(doc, { maxConcurrent: 4 });
+process.exit(exitCode);
+```
+
+**Separate commands (legacy layout with standalone `grading.yaml`):**
+
 ```typescript
 import { loadSuite, loadGradingConfig } from "@alis-build/harness-eval/config";
 import {
@@ -303,7 +392,7 @@ const envelope = buildEvalRunEnvelope(report, {
 writeFileSync("envelope.json", JSON.stringify(envelope, null, 2));
 
 // 5. Exit with appropriate code
-const behavioralPass = report.summary.cellsPassed === report.summary.cellsTotal;
+const behavioralPass = report.cells.every((c) => c.passed);
 const outcomePass = gradingReportPassed(grading);
 process.exit(behavioralPass && outcomePass ? 0 : 1);
 ```
@@ -311,9 +400,11 @@ process.exit(behavioralPass && outcomePass ? 0 : 1);
 # Citations
 
 [1] `src/index.ts` — main public API exports
-[2] `src/config/loader.ts` — loadSuite
-[3] `src/runner/suite.ts` — runSuite
-[4] `src/grader/grade-report.ts` — gradeReport
-[5] `src/eval-record/build.ts` — buildEvalRunEnvelope
-[6] `src/grader/transcript.ts` — trajectoryToTranscript
-[7] `src/otel/emitter.ts` — trajectoryToOtlp, emitOtel
+[2] `src/config/loader.ts` — loadSuite, loadSuiteDocument
+[3] `src/pipeline/run-pipeline.ts` — runPipeline
+[4] `src/pipeline/resolve-inputs.ts` — resolvePipelineInputs
+[5] `src/runner/suite.ts` — runSuite
+[6] `src/grader/grade-report.ts` — gradeReport
+[7] `src/eval-record/build.ts` — buildEvalRunEnvelope
+[8] `src/grader/transcript.ts` — trajectoryToTranscript
+[9] `src/otel/emitter.ts` — trajectoryToOtlp, emitOtel

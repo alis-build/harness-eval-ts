@@ -48,6 +48,33 @@ describe("resolveGradeOptions", () => {
     expect(resolved.binary).toBe("/usr/local/bin/claude");
   });
 
+  it("resolves codex judge adapter", () => {
+    const resolved = resolveGradeOptions({
+      judge: {
+        adapter: "codex",
+        model: "gpt-5.4",
+        codex: { ephemeral: true, binary: "codex" },
+      },
+    });
+
+    expect(resolved.judgeAdapter).toBe("codex");
+    expect(resolved.model).toBe("gpt-5.4");
+    expect(resolved.binary).toBe("codex");
+    expect(resolved.codex?.ephemeral).toBe(true);
+  });
+
+  it("prefers codex binary over claudeCode when adapter is codex", () => {
+    const resolved = resolveGradeOptions({
+      judge: {
+        adapter: "codex",
+        claudeCode: { binary: "claude" },
+        codex: { binary: "codex-bin" },
+      },
+    });
+
+    expect(resolved.binary).toBe("codex-bin");
+  });
+
   it("rejects unsupported adapter", () => {
     expect(() =>
       resolveGradeOptions({

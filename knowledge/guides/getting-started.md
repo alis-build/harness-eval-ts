@@ -24,7 +24,9 @@ After install, the `harness-eval` binary is available via `npx harness-eval` or 
 
 # Step 1 — Write a suite YAML
 
-Create `eval/basic.yaml` in your project root. This example tests that Claude reads a file when asked:
+Create `eval/suite.yaml` in your project root. This example tests that Claude reads a file when asked.
+
+**Recommended:** one unified `suite.yaml` with optional inline `judge:` and `pipeline:` blocks. See [`examples/pipeline/`](https://github.com/alis-build/harness-eval/tree/main/examples/pipeline) for the full layout.
 
 ```yaml
 adapter: claude-code
@@ -51,6 +53,23 @@ cases:
     expectations:
       - "States the correct project name from the README"
       - "Response is a single sentence as instructed"
+
+# Optional — inline judge (alternative to standalone grading.yaml)
+judge:
+  adapter: claude-code
+  model: claude-sonnet-4-6
+  timeoutMs: 120000
+  claudeCode:
+    permissionMode: bypassPermissions
+
+# Optional — orchestrate run → grade → envelope
+pipeline:
+  run:
+    output: eval/report.json
+  grade:
+    output: eval/grading.json
+  envelope:
+    output: eval/envelope.json
 ```
 
 **Key decisions made here:**
@@ -62,8 +81,16 @@ cases:
 
 # Step 2 — Run the behavioral eval
 
+**Unified pipeline (when `pipeline:` is defined):**
+
 ```bash
-npx harness-eval run eval/basic.yaml --output eval/report.json
+npx harness-eval pipeline eval/
+```
+
+**Or run only the harness step:**
+
+```bash
+npx harness-eval run eval/suite.yaml --output eval/report.json
 ```
 
 You'll see per-repetition progress and a summary:
@@ -80,15 +107,24 @@ All 1 cell(s) passed.
 If any assertion fails, the exit code is `1`. Use this in CI scripts:
 
 ```bash
-npx harness-eval run eval/basic.yaml --output eval/report.json || exit 1
+npx harness-eval run eval/suite.yaml --output eval/report.json || exit 1
 ```
 
 # Step 3 — Grade outcomes (optional)
 
-Behavioral assertions catch tool-call problems. To also verify that the *response content* is correct, add a grading config:
+Behavioral assertions catch tool-call problems. To also verify that the *response content* is correct, use the inline **`judge:`** block from step 1 (or a standalone **`grading.yaml`** — still supported).
+
+**With unified suite:**
+
+```bash
+npx harness-eval grade eval/report.json --suite eval/suite.yaml --output eval/grading.json
+# or: npx harness-eval pipeline eval/ --steps grade
+```
+
+**With standalone grading file:**
 
 ```yaml
-# eval/grading.yaml
+# eval/grading.yaml (alternate layout)
 judge:
   adapter: claude-code
   model: claude-sonnet-4-6
@@ -98,8 +134,6 @@ judge:
   claudeCode:
     permissionMode: bypassPermissions
 ```
-
-Run grading against the report from step 2:
 
 ```bash
 npx harness-eval grade eval/report.json \
@@ -204,7 +238,8 @@ Run and see pass rates per cell:
 # Citations
 
 [1] `examples/basic.yaml` — minimal example suite
-[2] `examples/matrix.yaml` — multi-cell matrix example
-[3] [Suite YAML reference](/reference/suite-yaml.md)
-[4] [Assertion DSL reference](/reference/assertion-dsl.md)
-[5] [Claude Code adapter reference](/reference/claude-code-adapter.md)
+[2] `examples/pipeline/` — unified judge + pipeline example
+[3] `examples/matrix.yaml` — multi-cell matrix example
+[4] [Suite YAML reference](/reference/suite-yaml.md)
+[5] [Assertion DSL reference](/reference/assertion-dsl.md)
+[6] [Claude Code adapter reference](/reference/claude-code-adapter.md)

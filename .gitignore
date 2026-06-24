@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+.pnpm-store/
+
+.cursor
+PLAN.md
+
+# Local eval runs and product-specific suites (see examples/ for committed demos)
+.debug/

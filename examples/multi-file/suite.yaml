@@ -2,6 +2,9 @@
 #
 # Run:
 #   harness-eval run examples/multi-file --output .debug/multi-file-report.json
+#
+# For run → grade → envelope in one command, add judge: + pipeline: blocks
+# (see examples/pipeline/suite.yaml).
 
 adapter: claude-code
 

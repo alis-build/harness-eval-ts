@@ -14,8 +14,10 @@ function withId(id: string, adapter = createMockAdapter()): HarnessAdapter {
 }
 
 describe("adapter registry", () => {
-  it("lists built-in claude-code adapter", () => {
-    expect(listAdapters()).toContain("claude-code");
+  it("lists built-in claude-code and codex adapters", () => {
+    const ids = listAdapters();
+    expect(ids).toContain("claude-code");
+    expect(ids).toContain("codex");
   });
 
   it("registers an adapter retrievable via getAdapter", () => {
