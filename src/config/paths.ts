@@ -10,6 +10,13 @@
 import { isAbsolute, join } from "node:path";
 
 import type { SuiteConfig } from "../adapters/types";
+import type {
+  PipelineConfig,
+  PipelineEnvelopeStep,
+  PipelineGradeStep,
+  PipelineRunStep,
+} from "./pipeline-schema";
+import { DEFAULT_PIPELINE_OUTPUTS } from "./pipeline-schema";
 
 /** Resolve a single path relative to `suiteDir` unless already absolute or `~/`. */
 function resolvePath(value: string, suiteDir: string): string {
@@ -56,6 +63,26 @@ function resolveClaudeCodePaths(
   return resolved;
 }
 
+/** Resolve Codex-specific path fields within a config block. */
+function resolveCodexPaths(
+  block: Record<string, unknown>,
+  suiteDir: string,
+): Record<string, unknown> {
+  const resolved = { ...block };
+  if (Array.isArray(resolved.addDirs)) {
+    resolved.addDirs = resolved.addDirs.map((p) =>
+      typeof p === "string" ? resolvePath(p, suiteDir) : p,
+    );
+  }
+  for (const field of ["outputSchema", "outputLastMessage"] as const) {
+    const value = resolved[field];
+    if (typeof value === "string") {
+      resolved[field] = resolvePath(value, suiteDir);
+    }
+  }
+  return resolved;
+}
+
 /** Resolve relative paths in a config layer relative to `suiteDir`. */
 export function resolveConfigPaths(
   config: SuiteConfig | undefined,
@@ -74,6 +101,16 @@ export function resolveConfigPaths(
   ) {
     resolved.claudeCode = resolveClaudeCodePaths(
       resolved.claudeCode as Record<string, unknown>,
+      suiteDir,
+    );
+  }
+  if (
+    resolved.codex &&
+    typeof resolved.codex === "object" &&
+    !Array.isArray(resolved.codex)
+  ) {
+    resolved.codex = resolveCodexPaths(
+      resolved.codex as Record<string, unknown>,
       suiteDir,
     );
   }
@@ -119,11 +156,7 @@ function resolveEnvPaths(
 ): Record<string, string> {
   const resolved: Record<string, string> = {};
   for (const [key, value] of Object.entries(env)) {
-    if (
-      value.startsWith("./") ||
-      value.startsWith("../") ||
-      (value.includes("/") && !value.startsWith("http"))
-    ) {
+    if (value.startsWith("./") || value.startsWith("../")) {
       resolved[key] = resolvePath(value, baseDir);
     } else {
       resolved[key] = value;
@@ -148,4 +181,89 @@ export function resolveGradingConfigPaths(
   if (config.judge.env) {
     config.judge.env = resolveEnvPaths(config.judge.env, baseDir);
   }
+}
+
+/** Resolve a pipeline artifact path relative to the suite.yaml directory. */
+export function resolvePipelinePath(
+  value: string | undefined,
+  defaultRelative: string,
+  suiteDir: string,
+): string {
+  const rel = value ?? defaultRelative;
+  return resolvePath(rel, suiteDir);
+}
+
+/** Resolve relative paths in a parsed pipeline config. */
+export function resolvePipelineConfigPaths(
+  pipeline: PipelineConfig,
+  suiteFilePath: string,
+): PipelineConfig {
+  const suiteDir = configFileDir(suiteFilePath);
+  const resolved: PipelineConfig = {};
+
+  if (pipeline.run) {
+    resolved.run = resolvePipelineRunStep(pipeline.run, suiteDir);
+  }
+  if (pipeline.grade) {
+    resolved.grade = resolvePipelineGradeStep(pipeline.grade, suiteDir);
+  }
+  if (pipeline.envelope) {
+    resolved.envelope = resolvePipelineEnvelopeStep(pipeline.envelope, suiteDir);
+  }
+
+  return resolved;
+}
+
+/** Resolve one pipeline step's run output path. */
+function resolvePipelineRunStep(
+  step: PipelineRunStep,
+  suiteDir: string,
+): PipelineRunStep {
+  return {
+    ...step,
+    output: resolvePipelinePath(step.output, DEFAULT_PIPELINE_OUTPUTS.run, suiteDir),
+  };
+}
+
+/** Resolve grade step input (optional) and output paths. */
+function resolvePipelineGradeStep(
+  step: PipelineGradeStep,
+  suiteDir: string,
+): PipelineGradeStep {
+  return {
+    ...step,
+    input: step.input
+      ? resolvePipelinePath(step.input, DEFAULT_PIPELINE_OUTPUTS.run, suiteDir)
+      : undefined,
+    output: resolvePipelinePath(
+      step.output,
+      DEFAULT_PIPELINE_OUTPUTS.grade,
+      suiteDir,
+    ),
+  };
+}
+
+/** Resolve envelope step report, grading, and output paths. */
+function resolvePipelineEnvelopeStep(
+  step: PipelineEnvelopeStep,
+  suiteDir: string,
+): PipelineEnvelopeStep {
+  return {
+    ...step,
+    report: step.report
+      ? resolvePipelinePath(step.report, DEFAULT_PIPELINE_OUTPUTS.run, suiteDir)
+      : undefined,
+    grading: step.grading
+      ? resolvePipelinePath(
+          step.grading,
+          DEFAULT_PIPELINE_OUTPUTS.grade,
+          suiteDir,
+        )
+      : undefined,
+    output: resolvePipelinePath(
+      step.output,
+      DEFAULT_PIPELINE_OUTPUTS.envelope,
+      suiteDir,
+    ),
+  };
 }

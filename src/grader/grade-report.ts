@@ -5,6 +5,7 @@
 import { readFile } from "node:fs/promises";
 
 import { createClaudeGrader, type ClaudeGraderOptions } from "./claude-grader";
+import { createCodexGrader, type CodexGraderOptions } from "./codex-grader";
 import { loadExpectationsMap } from "./expectations";
 import { trajectoryToTranscript } from "./transcript";
 import type {
@@ -15,6 +16,7 @@ import type {
 } from "./types";
 import { createLimit } from "../runner/limit";
 import type { CellReport, SuiteReport } from "../runner/types";
+import { resolveJudgeInfo } from "../eval-record/judge-metadata";
 
 /**
  * Grade every repetition in a {@link SuiteReport} that has expectations.
@@ -30,16 +32,26 @@ export async function gradeReport(
     ? await loadExpectationsMap(options.expectationsPath)
     : {};
 
+  // Select grader subprocess by judge adapter id from grading YAML or CLI.
   const gradeFn: GraderFn =
     options.gradeFn ??
-    createClaudeGrader({
-      binary: options.binary,
-      model: options.model,
-      timeoutMs: options.timeoutMs,
-      env: options.env,
-      cwd: options.cwd,
-      claudeCode: options.claudeCode as ClaudeGraderOptions["claudeCode"],
-    });
+    (options.judgeAdapter === "codex"
+      ? createCodexGrader({
+          binary: options.binary,
+          model: options.model,
+          timeoutMs: options.timeoutMs,
+          env: options.env,
+          cwd: options.cwd,
+          codex: options.codex as CodexGraderOptions["codex"],
+        })
+      : createClaudeGrader({
+          binary: options.binary,
+          model: options.model,
+          timeoutMs: options.timeoutMs,
+          env: options.env,
+          cwd: options.cwd,
+          claudeCode: options.claudeCode as ClaudeGraderOptions["claudeCode"],
+        }));
 
   const maxConcurrent = options.maxConcurrent ?? 2;
   const limit = createLimit(maxConcurrent);
@@ -166,6 +178,10 @@ export async function gradeReport(
     gradedAt: new Date().toISOString(),
     sourceReport: options.sourceReport ?? "",
     gradingConfigPath: options.gradingConfigPath,
+    judge: resolveJudgeInfo({
+      adapter: options.judgeAdapter ?? "claude-code",
+      model: options.model,
+    }),
     results,
     summary: {
       passed: passedExpectations,

@@ -16,7 +16,11 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { resolve, dirname, basename, join } from "node:path";
+import { stat } from "node:fs/promises";
 
+import { loadGradingConfig } from "../config/grading-loader";
+import { loadSuite } from "../config/loader";
 import { trajectoryToTranscript } from "../grader/transcript";
 import { toReferenceTrajectory } from "../eval-interchange/protojson/trajectory-instances";
 import { enrichRepetitionWithProtojson } from "../eval-interchange/enrich";
@@ -26,12 +30,16 @@ import type {
   EvalCellResult,
   EvalRepetition,
   EvalRunEnvelope,
+  JudgeInfo,
 } from "../types/eval-record";
 import {
   EVAL_RUN_SCHEMA_VERSION,
   TRAJECTORY_SCHEMA_VERSION,
 } from "../types/eval-record";
 import type { SuiteReport } from "../runner/types";
+import { judgeInfoFromGradingConfig,
+  resolveJudgeInfo,
+} from "./judge-metadata";
 
 /**
  * Pull raw stream-json events from an adapter result when the adapter exposes them.
@@ -74,6 +82,77 @@ function outcomePassForCell(
   );
 }
 
+/** Resolve judge metadata for envelope export (explicit options win). */
+async function resolveEnvelopeJudge(options: {
+  grading?: BuildEvalRunEnvelopeOptions["grading"];
+  gradingConfigPath?: string;
+}): Promise<JudgeInfo> {
+  if (options.grading?.judge) {
+    return options.grading.judge;
+  }
+
+  if (options.gradingConfigPath) {
+    try {
+      const config = await loadGradingConfig(
+        resolve(options.gradingConfigPath),
+      );
+      return judgeInfoFromGradingConfig(config);
+    } catch {
+      // Fall through to default when grading YAML is missing or invalid.
+    }
+  }
+
+  return resolveJudgeInfo({ adapter: "claude-code" });
+}
+
+/** Path to pass to {@link loadSuite} (directory layout uses the suite folder). */
+async function resolveSuiteLoadPath(suitePath: string): Promise<string> {
+  const abs = resolve(suitePath);
+  if (basename(abs) === "suite.yaml") {
+    return dirname(abs);
+  }
+  try {
+    const info = await stat(abs);
+    if (info.isDirectory()) {
+      return abs;
+    }
+  } catch {
+    // Fall through — loadSuite will surface read errors.
+  }
+  return abs;
+}
+
+/** Read suite YAML bytes for content hashing. */
+async function readSuiteYamlContent(suitePath: string): Promise<string> {
+  const loadPath = await resolveSuiteLoadPath(suitePath);
+  const yamlPath =
+    basename(resolve(suitePath)) === "suite.yaml"
+      ? resolve(suitePath)
+      : join(loadPath, "suite.yaml");
+  return readFile(yamlPath, "utf8");
+}
+async function resolveEnvelopeHarnessAdapter(options: {
+  harnessAdapter?: string;
+  suitePath?: string;
+}): Promise<string> {
+  if (options.harnessAdapter) {
+    return options.harnessAdapter;
+  }
+
+  if (options.suitePath) {
+    try {
+      const suite = await loadSuite(await resolveSuiteLoadPath(options.suitePath));
+      if (suite.adapter) {
+        return suite.adapter;
+      }
+    } catch {
+      // Fall through to default when suite cannot be loaded.
+    }
+  }
+
+  return "claude-code";
+}
+
 /**
  * Convert a {@link SuiteReport} (and optional grading) into a versioned
  * {@link EvalRunEnvelope} for storage or API handoff.
@@ -92,7 +171,7 @@ export function buildEvalRunEnvelope(
   const includeRaw = options.includeRawStreamEvents === true;
 
   const judge =
-    options.grading?.judge ?? { id: "harness-eval/claude-grader" };
+    options.grading?.judge ?? resolveJudgeInfo({ adapter: "claude-code" });
 
   const cells: EvalCellResult[] = report.cells.map((cell) => {
     const prompt = cell.prompt ?? "";
@@ -241,23 +320,33 @@ export async function buildEvalRunEnvelopeFromFiles(
   const reportText = await readFile(reportPath, "utf8");
   const report = JSON.parse(reportText) as SuiteReport;
 
+  const harnessAdapter = await resolveEnvelopeHarnessAdapter({
+    harnessAdapter: options.harness?.adapter,
+    suitePath: options.suitePath,
+  });
+
   let grading: BuildEvalRunEnvelopeOptions["grading"] | undefined =
     options.grading;
 
   if (options.gradingPath) {
     const gradingText = await readFile(options.gradingPath, "utf8");
     const parsed = JSON.parse(gradingText) as SuiteGradingReport;
+    const judge =
+      parsed.judge ??
+      (await resolveEnvelopeJudge({
+        gradingConfigPath: parsed.gradingConfigPath,
+      }));
     grading = {
       gradedAt: parsed.gradedAt,
       sourceReport: parsed.sourceReport,
       results: parsed.results,
-      judge: options.grading?.judge ?? { id: "harness-eval/claude-grader" },
+      judge,
     };
   }
 
   let suite = options.suite;
   if (options.suitePath) {
-    const content = await readFile(options.suitePath, "utf8");
+    const content = await readSuiteYamlContent(options.suitePath);
     suite = {
       ...suite,
       uri: options.suitePath,
@@ -269,5 +358,9 @@ export async function buildEvalRunEnvelopeFromFiles(
     ...options,
     suite,
     grading,
+    harness: {
+      ...options.harness,
+      adapter: harnessAdapter,
+    },
   });
 }

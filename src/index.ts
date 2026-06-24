@@ -46,7 +46,14 @@ export {
 } from "./runner/case";
 export { createLimit, type LimitedRunner } from "./runner/limit";
 
-export { ConfigError, loadSuite, parseSuite } from "./config/loader";
+export { ConfigError, loadSuite, loadSuiteDocument, parseSuite } from "./config/loader";
+export { runPipeline } from "./pipeline/run-pipeline";
+export {
+  resolveGradingArtifactFromSuite,
+  resolvePipelineInputs,
+} from "./pipeline/resolve-inputs";
+export type { SuiteDocument } from "./config/suite-document";
+export type { PipelineConfig } from "./config/pipeline-schema";
 
 export { trajectoryToOtlp, emitOtel } from "./otel/index";
 export type { EmitOtelOptions, ExportTraceServiceRequest } from "./otel/index";
@@ -55,6 +62,7 @@ export {
   gradeReport,
   trajectoryToTranscript,
   createClaudeGrader,
+  createCodexGrader,
   formatGradingConsole,
   resolveGradeOptions,
   gradingReportPassed,

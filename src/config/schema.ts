@@ -52,6 +52,27 @@ export const ClaudeCodeConfigSchema = z
   })
   .partial();
 
+/** Codex CLI adapter-specific options (nested under `codex`). */
+export const CodexConfigSchema = z
+  .object({
+    binary: z.string(),
+    profile: z.string(),
+    sandbox: z.enum(["read-only", "workspace-write", "danger-full-access"]),
+    addDirs: z.array(z.string()),
+    configOverrides: z.array(z.string()),
+    askForApproval: z.enum(["untrusted", "on-request", "never"]),
+    dangerouslyBypassApprovalsAndSandbox: z.boolean(),
+    dangerouslyBypassHookTrust: z.boolean(),
+    ephemeral: z.boolean(),
+    ignoreUserConfig: z.boolean(),
+    skipGitRepoCheck: z.boolean(),
+    outputSchema: z.string(),
+    outputLastMessage: z.string(),
+    captureLastMessage: z.boolean(),
+    isolateConfig: z.boolean(),
+  })
+  .partial();
+
 /** Generic + nested adapter config for one layer (defaultConfig, case, cell). */
 export const ConfigPartialSchema = z
   .object({
@@ -60,6 +81,7 @@ export const ConfigPartialSchema = z
     timeoutMs: z.number().int().positive(),
     env: z.record(z.string(), z.string()),
     claudeCode: ClaudeCodeConfigSchema,
+    codex: CodexConfigSchema,
   })
   .partial();
 

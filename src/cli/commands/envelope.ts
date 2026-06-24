@@ -20,6 +20,7 @@ import {
   toInstancesJsonl,
   toTrajectory,
 } from "../../eval-interchange/projections";
+import { resolveGradingArtifactFromSuite } from "../../pipeline/resolve-inputs";
 import type { EvalRunEnvelope } from "../../types/eval-record";
 import { getOption, hasOption, type ParsedArgs } from "../args";
 
@@ -100,8 +101,11 @@ export async function envelopeCommand(args: ParsedArgs): Promise<number> {
   }
 
   const outputPath = getOption(args.options, "output");
-  const gradingPath = getOption(args.options, "grading");
   const suitePath = getOption(args.options, "suite");
+  let gradingPath = getOption(args.options, "grading");
+  if (!gradingPath && suitePath) {
+    gradingPath = await resolveGradingArtifactFromSuite(suitePath);
+  }
   const projection = parseEnvelopeProjection(
     getOption(args.options, "projection"),
   );

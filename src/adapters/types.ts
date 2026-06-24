@@ -22,6 +22,8 @@ export interface BaseAdapterConfig {
 export type SuiteConfig = Partial<BaseAdapterConfig> & {
   /** Claude Code adapter options (when `adapter` is `claude-code`). */
   claudeCode?: Record<string, unknown>;
+  /** Codex CLI adapter options (when `adapter` is `codex`). */
+  codex?: Record<string, unknown>;
 };
 
 /** Generic harness adapter interface. */

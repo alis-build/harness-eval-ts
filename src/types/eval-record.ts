@@ -65,6 +65,8 @@ export interface JudgeInfo {
   id: string;
   model?: string;
   version?: string;
+  /** Grading adapter id when known (e.g. `codex`, `claude-code`). */
+  adapter?: string;
 }
 
 /** Outcome grades for one repetition (built-in or external judge). */

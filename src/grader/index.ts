@@ -9,6 +9,7 @@ export { gradeReport, loadSuiteReport } from "./grade-report";
 export { resolveGradeOptions, type GradeCliOverrides } from "./resolve-grade-options";
 export { trajectoryToTranscript } from "./transcript";
 export { createClaudeGrader, runClaudeGrader } from "./claude-grader";
+export { createCodexGrader, runCodexGrader } from "./codex-grader";
 export { loadExpectationsMap } from "./expectations";
 export { formatGradingConsole, gradingReportPassed } from "./format-console";
 export type {

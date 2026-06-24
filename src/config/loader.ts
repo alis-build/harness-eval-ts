@@ -1,34 +1,20 @@
 /**
  * Load a `TestSuite` from a YAML file, directory, or string.
  *
- * Supports two on-disk layouts:
- *   - Single file: `suite.yaml` with inline `cases`.
- *   - Directory: `suite.yaml` plus optional `cases/*.yaml` fragments merged
- *     in lexicographic path order.
- *
- * Relative paths in config (MCP config, plugin dirs, etc.) are resolved
- * against the suite file directory after load.
+ * For unified suite.yaml with optional `judge:` and `pipeline:` blocks,
+ * use {@link loadSuiteDocument}.
  */
 
-import { readdir, readFile, stat } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
-import type { TestCase, TestSuite } from "../runner/types";
+import type { TestSuite } from "../runner/types";
+import { parseCasesFile } from "./loader-internals";
 import { resolveSuitePaths } from "./paths";
-import {
-  SuiteDirectorySchema,
-  TestCaseSchema,
-  TestSuiteSchema,
-  type RawTestCase,
-} from "./schema";
-import {
-  ConfigError,
-  transformSuite,
-  transformSuiteDirectory,
-  transformTestCases,
-} from "./transform";
+import { SuiteDirectorySchema, TestSuiteSchema } from "./schema";
+import { loadSuiteDocument } from "./suite-document-loader";
+import { ConfigError, transformSuite, transformSuiteDirectory } from "./transform";
 
 export { ConfigError } from "./transform";
 export {
@@ -36,103 +22,24 @@ export {
   parseGradingConfig,
   type GradingConfig,
 } from "./grading-loader";
+export { loadSuiteDocument, type SuiteDocument } from "./suite-document-loader";
 
 /**
- * Load a suite from a file path or directory path.
+ * Load a suite from a file path or directory path (suite portion only).
  *
- * @throws {@link ConfigError} when the path is unreadable or validation fails.
+ * Orchestration blocks (`judge:`, `pipeline:`) are silently stripped — callers
+ * that only need the `TestSuite` are not broken by malformed orchestration YAML.
+ * Use {@link loadSuiteDocument} when you need validated orchestration metadata.
  */
 export async function loadSuite(filePath: string): Promise<TestSuite> {
-  const absolutePath = resolve(filePath);
-  let info;
-  try {
-    info = await stat(absolutePath);
-  } catch (err) {
-    throw new ConfigError(
-      `failed to read suite path: ${err instanceof Error ? err.message : String(err)}`,
-      filePath,
-    );
-  }
-
-  if (info.isDirectory()) {
-    return loadSuiteDirectory(absolutePath);
-  }
-  return loadSuiteFile(absolutePath);
-}
-
-/** Load and parse a single-file suite (not a directory layout). */
-async function loadSuiteFile(absolutePath: string): Promise<TestSuite> {
-  let content: string;
-  try {
-    content = await readFile(absolutePath, "utf8");
-  } catch (err) {
-    throw new ConfigError(
-      `failed to read suite file: ${err instanceof Error ? err.message : String(err)}`,
-      absolutePath,
-    );
-  }
-
-  return parseSuite(content, absolutePath);
-}
-
-/**
- * Load a directory suite: `suite.yaml` plus optional `cases/` YAML files.
- *
- * Cases from `suite.yaml` sort before external case files; within each file,
- * array order is preserved.
- */
-async function loadSuiteDirectory(dir: string): Promise<TestSuite> {
-  const suiteYamlPath = join(dir, "suite.yaml");
-  let content: string;
-  try {
-    content = await readFile(suiteYamlPath, "utf8");
-  } catch (err) {
-    throw new ConfigError(
-      `missing suite.yaml in suite directory: ${err instanceof Error ? err.message : String(err)}`,
-      dir,
-    );
-  }
-
-  const base = parseSuiteDirectory(content, suiteYamlPath);
-  const casesDir = join(dir, "cases");
-  const caseFiles = await collectCaseYamlFiles(casesDir);
-
-  type TaggedCase = { relPath: string; index: number; testCase: TestCase };
-  const tagged: TaggedCase[] = base.cases.map((testCase, index) => ({
-    relPath: "suite.yaml",
-    index,
-    testCase,
-  }));
-
-  for (const filePath of caseFiles) {
-    const fileContent = await readFile(filePath, "utf8");
-    const cases = parseCasesFile(fileContent, filePath);
-    const relPath = relative(casesDir, filePath);
-    for (const [index, testCase] of cases.entries()) {
-      tagged.push({ relPath, index, testCase });
-    }
-  }
-
-  tagged.sort((a, b) => {
-    const pathCmp = a.relPath.localeCompare(b.relPath);
-    if (pathCmp !== 0) return pathCmp;
-    return a.index - b.index;
-  });
-
-  const cases = tagged.map((entry) => entry.testCase);
-  if (cases.length === 0) {
-    throw new ConfigError("suite directory has no test cases", dir);
-  }
-
-  const suite: TestSuite = { ...base, cases };
-  resolveSuitePaths(suite, suiteYamlPath);
-  return suite;
+  const doc = await loadSuiteDocument(filePath, { validateOrchestration: false });
+  return doc.suite;
 }
 
 /**
  * Parse suite YAML from a string (single-file layout with inline cases).
  *
- * @param sourcePath Optional path for error messages and relative path resolution.
+ * Unknown top-level keys such as `judge` and `pipeline` are stripped.
  */
 export function parseSuite(
   yamlContent: string,
@@ -163,8 +70,8 @@ export function parseSuite(
   return suite;
 }
 
-/** Parse `suite.yaml` for directory layout (cases may be omitted). */
-function parseSuiteDirectory(
+/** Parse `suite.yaml` for directory layout (cases may be omitted). @internal */
+export function parseSuiteDirectory(
   yamlContent: string,
   sourcePath: string,
 ): TestSuite {
@@ -189,112 +96,8 @@ function parseSuiteDirectory(
   return transformSuiteDirectory(validated.data);
 }
 
-/** Parse one case file: single case, array, or `{ cases: [...] }`. */
-export function parseCasesFile(
-  yamlContent: string,
-  sourcePath?: string,
-): TestCase[] {
-  let raw: unknown;
-  try {
-    raw = parseYaml(yamlContent);
-  } catch (err) {
-    throw new ConfigError(
-      `YAML parse error: ${err instanceof Error ? err.message : String(err)}`,
-      sourcePath,
-    );
-  }
+export { parseCasesFile } from "./loader-internals";
 
-  const rawCases = extractRawCases(raw, sourcePath);
-  return transformTestCases(rawCases, sourcePath ?? "cases");
-}
-
-/**
- * Normalize raw YAML into a list of {@link RawTestCase} objects.
- *
- * Accepts a single case, an array, or `{ cases: [...] }`.
- */
-function extractRawCases(raw: unknown, sourcePath?: string): RawTestCase[] {
-  if (Array.isArray(raw)) {
-    return raw.map((item, index) => validateRawCase(item, sourcePath, index));
-  }
-
-  if (raw && typeof raw === "object") {
-    const obj = raw as Record<string, unknown>;
-    if (Array.isArray(obj.cases)) {
-      return obj.cases.map((item, index) =>
-        validateRawCase(item, sourcePath, index),
-      );
-    }
-    if ("id" in obj && "prompt" in obj && "assertions" in obj) {
-      return [validateRawCase(raw, sourcePath, 0)];
-    }
-  }
-
-  throw new ConfigError(
-    "expected a case object, array of cases, or { cases: [...] }",
-    sourcePath,
-  );
-}
-
-/** Validate one raw case object against {@link TestCaseSchema}. */
-function validateRawCase(
-  raw: unknown,
-  sourcePath: string | undefined,
-  index: number,
-): RawTestCase {
-  const validated = TestCaseSchema.safeParse(raw);
-  if (!validated.success) {
-    throw new ConfigError(
-      `validation failed:\n${formatZodError(validated.error, sourcePath)}`,
-      sourcePath,
-    );
-  }
-
-  return validated.data;
-}
-
-/**
- * Recursively collect `.yaml` / `.yml` files under `casesDir`.
- *
- * Returns an empty list when the directory does not exist — external cases
- * are optional in directory layout.
- */
-async function collectCaseYamlFiles(casesDir: string): Promise<string[]> {
-  const files: string[] = [];
-
-  async function walk(dir: string): Promise<void> {
-    let entries;
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch (err) {
-      if (
-        err instanceof Error &&
-        "code" in err &&
-        (err as NodeJS.ErrnoException).code === "ENOENT"
-      ) {
-        return;
-      }
-      throw err;
-    }
-
-    for (const entry of entries) {
-      const fullPath = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        await walk(fullPath);
-      } else if (
-        entry.isFile() &&
-        (entry.name.endsWith(".yaml") || entry.name.endsWith(".yml"))
-      ) {
-        files.push(fullPath);
-      }
-    }
-  }
-
-  await walk(casesDir);
-  return files.sort();
-}
-
-/** Format a zod validation error with optional source file prefix. */
 function formatZodError(err: z.ZodError, sourcePath?: string): string {
   return err.issues
     .map((issue) => {

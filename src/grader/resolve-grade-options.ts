@@ -3,6 +3,7 @@
  */
 
 import type { ClaudeCodeOptions } from "../adapters/claude-code/types";
+import type { CodexOptions } from "../adapters/codex/types";
 import type { GradingConfig } from "../config/grading-loader";
 import type { GradeReportOptions } from "./types";
 
@@ -27,15 +28,40 @@ export function resolveGradeOptions(
   const judge = fileConfig?.judge;
 
   const adapter = judge?.adapter ?? "claude-code";
-  if (adapter !== "claude-code") {
-    throw new Error(
-      `unsupported grading adapter "${adapter}" (only claude-code today)`,
-    );
-  }
 
   const claudeCode = (judge?.claudeCode ?? {}) as ClaudeCodeOptions;
-  const binary = cli.binary ?? claudeCode.binary;
-  const model = cli.model ?? judge?.model ?? claudeCode.model;
+  const codex = (judge?.codex ?? {}) as CodexOptions;
+  const adapterBlock = adapter === "codex" ? codex : claudeCode;
+  const binary = cli.binary ?? adapterBlock.binary;
+  const model = cli.model ?? judge?.model ?? adapterBlock.model;
+
+  if (adapter === "codex") {
+    // Strip binary/model from nested codex block — they are promoted to top-level options.
+    return {
+      sourceReport: cli.sourceReport,
+      expectationsPath: cli.expectationsPath,
+      model,
+      binary,
+      timeoutMs: cli.timeoutMs ?? judge?.timeoutMs,
+      maxConcurrent: cli.maxConcurrent ?? judge?.maxConcurrent,
+      systemInstruction: judge?.system_instruction,
+      env: judge?.env,
+      cwd: judge?.cwd,
+      judgeAdapter: "codex",
+      codex: {
+        ...codex,
+        binary: undefined,
+        model: undefined,
+      },
+      gradingConfigPath: configPath,
+    };
+  }
+
+  if (adapter !== "claude-code") {
+    throw new Error(
+      `unsupported grading adapter "${adapter}" (supported: claude-code, codex)`,
+    );
+  }
 
   return {
     sourceReport: cli.sourceReport,
@@ -47,6 +73,7 @@ export function resolveGradeOptions(
     systemInstruction: judge?.system_instruction,
     env: judge?.env,
     cwd: judge?.cwd,
+    judgeAdapter: "claude-code" as const,
     claudeCode: {
       ...claudeCode,
       binary: undefined,

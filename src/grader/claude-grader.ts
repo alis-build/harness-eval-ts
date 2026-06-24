@@ -2,12 +2,11 @@
  * Grade expectations by spawning Claude as judge (skill-creator grader pattern).
  */
 
-import { spawn } from "node:child_process";
-
 import { buildJudgeArgs } from "../adapters/claude-code/flags";
 import type { ClaudeCodeOptions } from "../adapters/claude-code/types";
 import { buildGraderPrompt } from "./prompt";
 import { extractClaudeResponseText, parseGraderJson } from "./parse";
+import { spawnCollectStdout } from "./spawn-judge";
 import type { GraderFn, GraderInput, GraderOutput } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 300_000;
@@ -66,13 +65,13 @@ export async function runClaudeGrader(
     model,
   });
 
-  const stdout = await spawnCollectStdout(
+  const stdout = await spawnCollectStdout({
     binary,
     args,
     timeoutMs,
-    options.env,
-    options.cwd,
-  );
+    env: buildChildEnv(options.env),
+    cwd: options.cwd,
+  });
   const responseText = extractClaudeResponseText(stdout);
   const parsed = parseGraderJson(responseText);
 
@@ -116,66 +115,6 @@ export async function runClaudeGrader(
     },
     evalFeedback: parsed.evalFeedback,
   };
-}
-
-/**
- * Spawn a child process and collect stdout until exit or timeout.
- *
- * Non-zero exit with empty stdout is treated as failure; partial stdout on
- * non-zero exit is retained (Claude sometimes exits non-zero after emitting JSON).
- */
-function spawnCollectStdout(
-  binary: string,
-  args: string[],
-  timeoutMs: number,
-  extraEnv?: Record<string, string>,
-  cwd?: string,
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(binary, args, {
-      env: buildChildEnv(extraEnv),
-      cwd,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    const chunks: string[] = [];
-    child.stdout?.setEncoding("utf8");
-    child.stdout?.on("data", (c: string) => chunks.push(c));
-
-    const stderrChunks: string[] = [];
-    child.stderr?.setEncoding("utf8");
-    child.stderr?.on("data", (c: string) => stderrChunks.push(c));
-
-    const timer = setTimeout(() => {
-      child.kill("SIGTERM");
-      const stderrHint = stderrChunks.join("").trim().slice(0, 400);
-      reject(
-        new Error(
-          `grader timed out after ${timeoutMs}ms` +
-            (stderrHint ? ` (stderr: ${stderrHint})` : ""),
-        ),
-      );
-    }, timeoutMs);
-
-    const finalize = (err?: Error) => {
-      clearTimeout(timer);
-      if (err) reject(err);
-      else resolve(chunks.join(""));
-    };
-
-    child.on("error", (err) => finalize(err));
-    child.on("close", (code) => {
-      if (code !== 0 && chunks.length === 0) {
-        finalize(
-          new Error(
-            `grader exited ${code}: ${stderrChunks.join("").slice(0, 500)}`,
-          ),
-        );
-      } else {
-        finalize();
-      }
-    });
-  });
 }
 
 /**

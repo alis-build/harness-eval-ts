@@ -44,6 +44,41 @@ export function extractClaudeResponseText(stdout: string): string {
   return trimmed;
 }
 
+/**
+ * Extract assistant text from Codex judge stdout.
+ *
+ * Handles plain text and JSONL streams from accidental `--json` usage.
+ */
+export function extractCodexResponseText(stdout: string): string {
+  const trimmed = stdout.trim();
+  if (!trimmed) return "";
+
+  const lines = trimmed.split("\n").filter((line) => line.trim().length > 0);
+  if (lines.length > 1) {
+    // Scan from the end — the final assistant_message in JSONL is the judge verdict.
+    for (let i = lines.length - 1; i >= 0; i--) {
+      try {
+        const event = JSON.parse(lines[i]!) as {
+          type?: string;
+          item?: { type?: string; item_type?: string; text?: string };
+        };
+        if (
+          event.type === "item.completed" &&
+          (event.item?.type === "assistant_message" ||
+            event.item?.item_type === "assistant_message") &&
+          event.item.text
+        ) {
+          return event.item.text;
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  return trimmed;
+}
+
 /** Walk a stream-json event array and return the final assistant or result text. */
 function extractFromEventArray(events: unknown[]): string | null {
   const result = events.find(

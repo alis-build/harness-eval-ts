@@ -39,12 +39,13 @@ export async function gradeCommand(args: ParsedArgs): Promise<number> {
   const reportPath = args.positional[0];
   if (!reportPath) {
     console.error(
-      "usage: harness-eval grade <report.json> [--config grading.yaml] [--expectations path] [--output path] [--model id] [--timeout-ms N] [--max-concurrent N]",
+      "usage: harness-eval grade <report.json> [--config grading.yaml] [--suite suite.yaml] [--expectations path] [--output path] [--model id] [--timeout-ms N] [--max-concurrent N]",
     );
     return 2;
   }
 
   const configPath = getOption(args.options, "config");
+  const suitePath = getOption(args.options, "suite");
   const expectationsPath = getOption(args.options, "expectations");
   const outputPath = getOption(args.options, "output");
   const model = getOption(args.options, "model");
@@ -60,9 +61,14 @@ export async function gradeCommand(args: ParsedArgs): Promise<number> {
     progressMode !== "json" && resolveProgressColor(args.options);
 
   let fileConfig;
-  if (configPath) {
+  const gradingConfigPath = configPath ?? suitePath;
+  if (configPath && suitePath) {
+    console.error("grade: use only one of --config or --suite");
+    return 2;
+  }
+  if (gradingConfigPath) {
     try {
-      fileConfig = await loadGradingConfig(configPath);
+      fileConfig = await loadGradingConfig(gradingConfigPath);
     } catch (err) {
       console.error(err instanceof Error ? err.message : String(err));
       return 2;
@@ -89,7 +95,7 @@ export async function gradeCommand(args: ParsedArgs): Promise<number> {
         timeoutMs,
         maxConcurrent,
       },
-      configPath,
+      configPath ?? suitePath,
     );
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));

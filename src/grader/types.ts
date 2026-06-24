@@ -54,6 +54,12 @@ export interface SuiteGradingReport {
   sourceReport: string;
   /** Grading YAML path when `--config` was used. */
   gradingConfigPath?: string;
+  /** Judge that produced outcome grades. */
+  judge?: {
+    id: string;
+    model?: string;
+    adapter?: string;
+  };
   results: RepGradingResult[];
   summary: GradingSummary;
 }
@@ -83,8 +89,12 @@ export interface GradeReportOptions {
   env?: Record<string, string>;
   /** Working directory for the judge subprocess. */
   cwd?: string;
+  /** Grading adapter id. Default: `claude-code`. */
+  judgeAdapter?: "claude-code" | "codex";
   /** Claude Code options for the judge (nested in grading YAML under `claudeCode`). */
   claudeCode?: Record<string, unknown>;
+  /** Codex CLI options for the judge (nested in grading YAML under `codex`). */
+  codex?: Record<string, unknown>;
   /** Path to grading YAML when `--config` was used. */
   gradingConfigPath?: string;
   /** Inject a custom grader (for tests). */
