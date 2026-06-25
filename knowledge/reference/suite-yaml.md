@@ -16,7 +16,7 @@ A suite YAML file is the primary input to `harness-eval run` and `harness-eval p
 - Test cases with prompts, assertions, and expectations
 - Optionally: inline **`judge:`** (outcome grading config) and **`pipeline:`** (orchestration)
 
-Use **one `suite.yaml` per harness target** (e.g. separate files for Claude Code vs Codex when tool names differ).
+Use **one `suite.yaml` per harness target** (e.g. separate files for Claude Code vs Codex vs Gemini CLI when tool names differ).
 
 ```yaml
 # Top-level keys
@@ -36,7 +36,7 @@ pipeline: { ... }             # Optional; run → grade → envelope orchestrati
 adapter: claude-code
 ```
 
-Selects the harness adapter. Defaults to `"claude-code"`. Must match an ID in the adapter registry. See [adapter pattern](/architecture/adapters.md).
+Selects the harness adapter. Defaults to `"claude-code"`. Built-in IDs: `claude-code`, `codex`, `gemini-cli`. See [adapter pattern](/architecture/adapters.md).
 
 ## defaultConfig
 
@@ -47,14 +47,16 @@ defaultConfig:
   model: claude-sonnet-4-6     # model ID
   timeoutMs: 120000             # harness process timeout (ms)
   cwd: ..                       # working directory for harness
-  maxTurns: 10                  # --max-turns for Claude
-  claudeCode:                   # Claude Code adapter config
+  maxTurns: 10                  # harness turn limit (Claude Code, Gemini CLI)
+  claudeCode:                   # Claude Code adapter config (when adapter: claude-code)
     permissionMode: bypassPermissions
     allowedTools: [Read, mcp__plugin__*]
     isolateConfig: false        # false = use logged-in config
+  # codex: { ... }              # Codex adapter config (when adapter: codex)
+  # geminiCli: { ... }          # Gemini CLI adapter config (when adapter: gemini-cli)
 ```
 
-For `claudeCode` fields see [Claude Code adapter reference](/reference/claude-code-adapter.md).
+Adapter-specific nested keys: [`claudeCode`](/reference/claude-code-adapter.md), [`codex`](/reference/codex-adapter.md), [`geminiCli`](/reference/gemini-cli-adapter.md).
 
 ## matrix
 
@@ -198,11 +200,19 @@ Working directory for the harness process. Relative paths are resolved relative 
 maxTurns: 10
 ```
 
-Maps to `--max-turns`. Limits how many assistant turns the harness will take before stopping.
+Maps to `--max-turns` (Claude Code, Gemini CLI). Limits how many assistant turns the harness will take before stopping.
 
 ## claudeCode
 
-Nested config block for Claude Code adapter options. See [Claude Code adapter reference](/reference/claude-code-adapter.md).
+Nested config block for Claude Code adapter options (when `adapter: claude-code`). See [Claude Code adapter reference](/reference/claude-code-adapter.md).
+
+## codex
+
+Nested config block for Codex adapter options (when `adapter: codex`). See [Codex adapter reference](/reference/codex-adapter.md).
+
+## geminiCli
+
+Nested config block for Gemini CLI adapter options (when `adapter: gemini-cli`). See [Gemini CLI adapter reference](/reference/gemini-cli-adapter.md).
 
 ---
 

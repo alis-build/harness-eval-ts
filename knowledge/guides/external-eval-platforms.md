@@ -26,7 +26,7 @@ harness-eval run eval/suite.yaml --output report.json
 # Exit code 0 = all assertions met thresholds. Gate PR on this.
 ```
 
-Add `harness-eval grade` for outcome grading with the built-in Claude judge. No external platform required.
+Add `harness-eval grade` for outcome grading with a built-in judge (Claude Code, Codex, or Gemini CLI). No external platform required.
 
 ---
 

@@ -2,13 +2,13 @@
 type: Overview
 title: harness-eval — Project Overview
 description: Statistical evaluation framework for AI coding agent harnesses; answers whether a harness reliably calls the right tools.
-tags: [eval, ai-agents, claude-code, testing, harness]
+tags: [eval, ai-agents, claude-code, codex, gemini-cli, testing, harness]
 timestamp: 2026-06-24T00:00:00Z
 ---
 
 # What is harness-eval?
 
-`@alis-build/harness-eval` is a statistical evaluation framework for **AI coding agent harnesses** — the plugin and configuration layers that sit atop foundation models like Claude Code. It answers one core question:
+`@alis-build/harness-eval` is a statistical evaluation framework for **AI coding agent harnesses** — the plugin and configuration layers that sit atop foundation models (Claude Code, Codex, Gemini CLI, and others). It answers one core question:
 
 > When a user asks *X*, does this harness reliably call our MCP tools — in the right order, with the right arguments, within acceptable cost and latency — across different models and plugin configurations?
 
@@ -26,7 +26,7 @@ AI coding agent harnesses are difficult to evaluate because:
 harness-eval addresses all four by providing:
 
 - **Statistical repetitions** — each test case runs N times per configuration cell; assertions fire against the aggregated pass rate.
-- **Normalized trajectory format** — a vendor-neutral [`TrajectoryView`](/concepts/trajectory-view.md) that abstracts over Claude's `stream-json` format, enabling assertions to work without parsing raw streams.
+- **Normalized trajectory format** — a vendor-neutral [`TrajectoryView`](/concepts/trajectory-view.md) that abstracts over vendor-specific output (Claude `stream-json`, Codex `exec --json`, Gemini `stream-json`, etc.), enabling assertions to work without parsing raw streams.
 - **Two-layer evaluation** — deterministic [behavioral assertions](/reference/assertion-dsl.md) for tool-call behavior, plus an optional LLM judge for outcome quality. See [Two-layer evaluation](/architecture/two-layer-evaluation.md).
 - **Configuration matrix** — a declarative YAML [suite format](/reference/suite-yaml.md) with a `matrix` block that fans out runs across cells.
 
@@ -44,7 +44,7 @@ harness-eval addresses all four by providing:
 
 # Design decisions
 
-**Adapters are pluggable.** The framework defines a `HarnessAdapter` interface. Today only the [Claude Code adapter](/reference/claude-code-adapter.md) ships; Cursor and Gemini support are planned. Assertions and judges never parse vendor streams directly — they operate on `TrajectoryView`.
+**Adapters are pluggable.** The framework defines a `HarnessAdapter` interface. Three built-in harness adapters ship today: [Claude Code](/reference/claude-code-adapter.md), [Codex](/reference/codex-adapter.md), and [Gemini CLI](/reference/gemini-cli-adapter.md). Each has a matching built-in judge. Assertions and judges never parse vendor streams directly — they operate on `TrajectoryView`.
 
 **Behavioral evaluation is deterministic.** Assertions are pure functions: given a trajectory, they return pass or fail. No LLM is involved. This makes behavioral gates fast, cheap, and reproducible.
 
@@ -57,7 +57,7 @@ harness-eval addresses all four by providing:
 | Field | Value |
 |-------|-------|
 | Package name | `@alis-build/harness-eval` |
-| Current version | 0.1.2 |
+| Current version | 0.1.3 |
 | Node requirement | ≥22.12.0 |
 | Module format | ES Module |
 | License | Apache-2.0 |

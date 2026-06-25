@@ -13,7 +13,7 @@ A `TrajectoryView` is the normalized record of one harness session: every tool c
 
 **Key design goals:**
 
-- **Vendor-neutral.** Assertions and judges never parse raw Claude `stream-json` directly — they operate on `TrajectoryView`. When a new adapter ships, only the adapter changes.
+- **Vendor-neutral.** Assertions and judges never parse raw vendor streams directly — they operate on `TrajectoryView`. When a new adapter ships, only the adapter changes.
 - **Ordered.** `turnIndex` and `callIndex` are the canonical ordering primitives, not wall-clock timestamps. This makes ordering assertions (`called_before`, `sequence`) reliable across harness implementations.
 - **Compact.** The view captures what matters for evaluation — tool calls, turns, response, usage — without duplicating the full vendor stream. Raw stream events are optional and carried separately.
 

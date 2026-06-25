@@ -1,6 +1,8 @@
 # @alis-build/harness-eval
 
-Statistical eval framework for **AI coding agent harnesses** (Claude Code today; Cursor and Gemini planned). Run real headless harness sessions, capture tool trajectories, and score behavior and outcomes across many repetitions and configurations.
+Statistical eval framework for **AI coding agent harnesses**. Run real headless harness sessions, capture tool trajectories, and score behavior and outcomes across many repetitions and configurations.
+
+**Built-in harness adapters:** `claude-code`, `codex`, and `gemini-cli`. Set `adapter:` in suite YAML; the runner, assertions, and eval interchange stay the same regardless of vendor.
 
 **Use it to answer:** “When users ask X, does this harness actually call our MCP tools — reliably, in this plugin/model setup?”
 
@@ -9,10 +11,20 @@ Statistical eval framework for **AI coding agent harnesses** (Claude Code today;
 ## Requirements
 
 - Node.js ≥ 22.12 required; Node 24 LTS recommended for development and CI
-- `claude` on `PATH` (for the Claude Code adapter)
-- Authentication for Claude Code:
-  - **Option A:** `claude login` and set `isolateConfig: false` in your suite (uses your normal plugins/MCP setup)
-  - **Option B:** `ANTHROPIC_API_KEY` with isolated config per run (default adapter behavior)
+- A harness CLI on `PATH` for the adapter you use (see [Adding harness adapters](#adding-harness-adapters)):
+  - **`claude-code`** — `claude` ([Claude Code CLI](https://code.claude.com/docs/en/cli-reference))
+  - **`codex`** — `codex` ([Codex CLI](https://developers.openai.com/codex/cli/reference))
+  - **`gemini-cli`** — `gemini` ([Gemini CLI](https://geminicli.com/docs/cli/cli-reference/))
+
+### Authentication (by adapter)
+
+| Adapter | Typical auth |
+| ------- | ------------ |
+| **Claude Code** | `claude login` with `isolateConfig: false`, or `ANTHROPIC_API_KEY` with isolated config (default harness behavior) |
+| **Codex** | Logged-in `~/.codex`, or `OPENAI_API_KEY` when `codex.isolateConfig: true` |
+| **Gemini CLI** | Logged-in Gemini CLI config with `geminiCli.isolateConfig: false`, or Vertex/API key env vars (`GOOGLE_APPLICATION_CREDENTIALS`, `GEMINI_API_KEY`, etc.) when isolated |
+
+Each adapter section below documents `isolateConfig`, MCP setup, and headless flags in detail.
 
 ---
 
@@ -55,13 +67,17 @@ pnpm exec harness-eval --help
 Suites are YAML files. Committed examples:
 
 - [`examples/pipeline/`](examples/pipeline/) — **recommended** unified layout with inline `judge:` + `pipeline:` orchestration
-- [`examples/basic.yaml`](examples/basic.yaml) — minimal smoke test using the built-in `Read` tool on this repo's README
-- [`examples/matrix.yaml`](examples/matrix.yaml) — same idea with a model matrix (sonnet vs opus)
+- [`examples/basic.yaml`](examples/basic.yaml) — Claude Code smoke test (`Read` on this repo's README)
+- [`examples/codex-basic.yaml`](examples/codex-basic.yaml) — Codex CLI smoke test
+- [`examples/gemini-cli-basic.yaml`](examples/gemini-cli-basic.yaml) — Gemini CLI smoke test
+- [`examples/matrix.yaml`](examples/matrix.yaml) — Claude Code with a model matrix (sonnet vs opus)
 - [`examples/multi-file/`](examples/multi-file/) — directory layout with `suite.yaml` plus cases under `cases/`
-- [`examples/grading.yaml`](examples/grading.yaml) — standalone judge config (alternate to inline `judge:`)
+- [`examples/grading.yaml`](examples/grading.yaml) — Claude Code judge config (standalone)
+- [`examples/codex-grading.yaml`](examples/codex-grading.yaml) — Codex judge config
+- [`examples/gemini-grading.yaml`](examples/gemini-grading.yaml) — Gemini CLI judge config
 
 ```yaml
-adapter: claude-code
+adapter: claude-code   # or: codex | gemini-cli
 
 defaultConfig:
   model: claude-sonnet-4-6
@@ -95,7 +111,7 @@ cases:
       - "The summary is grounded in README content, not a generic refusal"
 ```
 
-Generic fields (`model`, `cwd`, `timeoutMs`, `env`) sit at the top level. Claude-specific options go under `claudeCode`.
+Generic fields (`model`, `cwd`, `timeoutMs`, `env`) sit at the top level. Harness-specific options nest under `claudeCode`, `codex`, or `geminiCli` depending on `adapter`.
 
 **Full suite & grading YAML reference:** [docs/suite-config.md](docs/suite-config.md) — all case/matrix fields, inline `judge:` / `pipeline:`, multi-file layout, and standalone `grading.yaml`.
 
@@ -109,7 +125,7 @@ npx @alis-build/harness-eval pipeline examples/pipeline/
 npx @alis-build/harness-eval run examples/basic.yaml --output report.json --max-concurrent 1 --format console
 ```
 
-This spawns Claude Code headless for each (case × matrix cell × repetition), evaluates **assertions** on the captured trajectory, and prints pass rates.
+This spawns the configured harness CLI headless for each (case × matrix cell × repetition), evaluates **assertions** on the captured trajectory, and prints pass rates.
 
 **Progress (stderr):** one line per repetition with ETA by default; use `--quiet` for dots or `--verbose` for tool/assertion detail.
 
@@ -130,7 +146,7 @@ npx @alis-build/harness-eval grade report.json --suite examples/pipeline/suite.y
 npx @alis-build/harness-eval grade report.json --config examples/grading.yaml --output grading.json --max-concurrent 1 --format console
 ```
 
-Runs a separate Claude subprocess as **judge** against the `expectations` in your suite (copied into `report.json`). Produces per-expectation PASS/FAIL with cited evidence.
+Runs a separate harness subprocess as **judge** (`judge.adapter`: `claude-code`, `codex`, or `gemini-cli`) against the `expectations` in your suite (copied into `report.json`). Produces per-expectation PASS/FAIL with cited evidence.
 
 Exit codes: `0` = all graded expectations passed; `1` = at least one failed; `2` = no expectations or no gradable repetitions.
 
@@ -138,13 +154,13 @@ Exit codes: `0` = all graded expectations passed; `1` = at least one failed; `2`
 
 ## Data contracts & schemas
 
-harness-eval separates **vendor output** from **eval interchange**. Use the types below when wiring CI, a database, or an external judge — not Claude `stream-json` or OTLP as your primary record.
+harness-eval separates **vendor output** from **eval interchange**. Use the types below when wiring CI, a database, or an external judge — not raw adapter NDJSON or OTLP as your primary record.
 
 ### Layering
 
 | Layer           | Type                  | Where                     | Use for                                            |
 | --------------- | --------------------- | ------------------------- | -------------------------------------------------- |
-| Vendor stream   | `StreamEvent`         | `src/types/stream.ts`     | Claude `stream-json` debug only                    |
+| Vendor stream   | `StreamEvent`         | `src/types/stream.ts`     | Adapter debug only (Claude/Codex/Gemini NDJSON)    |
 | Harness session | **`TrajectoryView`**  | `src/types/trajectory.ts` | Assertions, trajectory queries, judge input        |
 | Run report      | **`SuiteReport`**     | `report.json` from `run`  | Runner output; full trajectories + assertion stats |
 | Eval record     | **`EvalRunEnvelope`** | `buildEvalRunEnvelope()`  | CI gates, APIs, DB storage                         |
@@ -268,7 +284,7 @@ You do not need `harness-eval grade` if you already have LangSmith, Braintrust, 
 | ------------------------ | ------------------------------ | ------------------------------------------ |
 | Headless harness runs    | `run` / `runSuite`             | —                                          |
 | Tool-call behavior       | Assertions on `TrajectoryView` | Optional: re-implement on `toolCalls`      |
-| Outcome / rubric scoring | `grade` (Claude judge)         | Your judge, eval platform, or human review |
+| Outcome / rubric scoring | `grade` (built-in judges)      | Your judge, eval platform, or human review |
 | Storage contract         | `EvalRunEnvelope`              | Same envelope; attach `externalScores`     |
 
 ### Pattern 1 — Behavioral only (no LLM judge)
@@ -305,7 +321,7 @@ const myJudge: GraderFn = async ({ prompt, transcript, expectations }) => {
 const grading = await gradeReport(report, { gradeFn: myJudge });
 ```
 
-Output is the same `SuiteGradingReport` shape as the built-in Claude grader — merge into `EvalRunEnvelope` via `buildEvalRunEnvelope(report, { grading })`.
+Output is the same `SuiteGradingReport` shape as the built-in judges — merge into `EvalRunEnvelope` via `buildEvalRunEnvelope(report, { grading })`.
 
 ### Pattern 3 — Separate judge pipeline (any language)
 
@@ -339,7 +355,7 @@ envelope.cells[0].repetitions[0].externalScores = [
 ];
 ```
 
-**Judges should use `trajectoryToTranscript(view, prompt)` or structured `toolCalls`** — not raw Claude `stream-json` (Claude-only and verbose).
+**Judges should use `trajectoryToTranscript(view, prompt)` or structured `toolCalls`** — not raw vendor NDJSON (adapter-specific and verbose).
 
 ### Pattern 4 — LangSmith, Braintrust, OpenAI Evals, etc.
 
@@ -401,7 +417,7 @@ Map your framework's output into these shapes (or use `externalScores`) so CI an
 | Layer        | Command | What it checks                          | Mechanism                                    |
 | ------------ | ------- | --------------------------------------- | -------------------------------------------- |
 | **Behavior** | `run`   | Tool calls, order, args, efficiency     | Deterministic assertions on `TrajectoryView` |
-| **Outcome**  | `grade` | Answer quality, grounding, completeness | LLM judge on transcript + `finalResponse`    |
+| **Outcome**  | `grade` | Answer quality, grounding, completeness | LLM judge (`claude-code`, `codex`, or `gemini-cli`) on transcript + `finalResponse` |
 
 Both layers use statistical thresholds: a case runs `repetitions` times per matrix cell, and each assertion/expectation has a pass-rate threshold (default `1.0`).
 
@@ -435,12 +451,12 @@ npx @alis-build/harness-eval --help
 
 ### `grade`
 
-Uses **`grading.yaml`** or an inline **`judge:`** block in `suite.yaml` (`--suite`).
+Uses **`grading.yaml`**, an inline **`judge:`** block in `suite.yaml` (`--suite`), or adapter-specific grading files under `examples/`.
 
 **Field reference:** [docs/suite-config.md — Grading config](docs/suite-config.md#grading-config-gradingyaml)
 
 ```yaml
-# examples/grading.yaml
+# examples/grading.yaml (Claude Code judge)
 judge:
   adapter: claude-code
   model: claude-sonnet-4-6
@@ -450,26 +466,38 @@ judge:
     permissionMode: bypassPermissions
 ```
 
+Other committed judge configs: [`examples/codex-grading.yaml`](examples/codex-grading.yaml) (`adapter: codex`), [`examples/gemini-grading.yaml`](examples/gemini-grading.yaml) (`adapter: gemini-cli`).
+
 ```bash
 npx @alis-build/harness-eval grade report.json --config examples/grading.yaml --output grading.json
+npx @alis-build/harness-eval grade report.json --config examples/codex-grading.yaml --output grading.json
+npx @alis-build/harness-eval grade report.json --config examples/gemini-grading.yaml --output grading.json
 ```
 
 | Option                                 | Description                                                       |
 | -------------------------------------- | ----------------------------------------------------------------- |
-| `--config <path>`                      | Grading YAML (`judge` block) — model, env, timeout, `claudeCode`  |
+| `--config <path>`                      | Grading YAML (`judge` block) — model, env, timeout, adapter options |
 | `--suite <path>`                       | Unified `suite.yaml` with inline `judge:` (alternative to `--config`) |
 | `--output <path>`                      | Write grading JSON                                                |
 | `--expectations <path>`                | Sidecar YAML/JSON if report lacks expectations                    |
 | `--format console\|json`               | Output format                                                     |
 | `--model <id>`                         | Overrides `judge.model` in config                                 |
-| `--binary <path>`                      | Overrides `judge.claudeCode.binary`                               |
+| `--binary <path>`                      | Overrides judge binary for the selected adapter                   |
 | `--timeout-ms <n>`                     | Overrides `judge.timeoutMs`                                       |
 | `--max-concurrent <n>`                 | Overrides `judge.maxConcurrent` (default: 2 if unset)             |
 | `--quiet` / `--verbose` / `--progress` | Same progress modes as `run` (including `--color` / `--no-color`) |
 
 CLI flags override the YAML file. Expectations still come from `report.json` (copied from the suite at `run` time) unless `--expectations` is set. The grading report may include `gradingConfigPath` when `--config` was used.
 
-The built-in judge spawns Claude with **`--output-format json`** (single-shot response, not `stream-json`). It applies **safe defaults** so Claude Code does not reload plugins/MCP during grading: `maxTurns: 1`, `bare: true`, `disableSlashCommands: true`, `noSessionPersistence: true`, plus `permissionMode: bypassPermissions` on the judge subprocess. Override in `judge.claudeCode` only if you need a different judge setup.
+**Built-in judge defaults** (override under `judge.claudeCode`, `judge.codex`, or `judge.geminiCli`):
+
+| Adapter | Defaults (summary) |
+| ------- | ------------------ |
+| `claude-code` | `maxTurns: 1`, `bare: true`, `disableSlashCommands: true`, `noSessionPersistence: true`, `permissionMode: bypassPermissions`; JSON output |
+| `codex` | `ephemeral: true`, `ignoreUserConfig: true`, `skipGitRepoCheck: true`, `askForApproval: never` |
+| `gemini-cli` | `approvalMode: yolo`, `isolateConfig: true`, `skipTrust: true`; `--output-format json` |
+
+See [docs/suite-config.md](docs/suite-config.md) and each adapter section below for full flag tables.
 
 Exit codes: `0` = all expectations passed; `1` = failures; `2` = no expectations or no gradable repetitions (harness failures without trajectories are skipped).
 
@@ -583,9 +611,17 @@ Define expected tool calls for Vertex trajectory metrics on the eval envelope. U
 
 ---
 
-## Adding harness adapters
+## Harness adapters
 
-Built-in adapters register at module load. **`claude-code`**, **`codex`**, and **`gemini-cli`** ship today; additional harnesses (Antigravity CLI) plug in via the same pattern:
+Built-in adapters register at module load. Each has a dedicated section below with CLI flag mapping, examples, and judge configuration.
+
+| Adapter | Suite key | Example suite | Example judge |
+| ------- | --------- | ------------- | ------------- |
+| Claude Code | `claudeCode` | [`examples/basic.yaml`](examples/basic.yaml) | [`examples/grading.yaml`](examples/grading.yaml) |
+| Codex CLI | `codex` | [`examples/codex-basic.yaml`](examples/codex-basic.yaml) | [`examples/codex-grading.yaml`](examples/codex-grading.yaml) |
+| Gemini CLI | `geminiCli` | [`examples/gemini-cli-basic.yaml`](examples/gemini-cli-basic.yaml) | [`examples/gemini-grading.yaml`](examples/gemini-grading.yaml) |
+
+Additional harnesses (e.g. Antigravity CLI) plug in via the same pattern:
 
 1. Implement `HarnessAdapter` under `src/adapters/<id>/` with a `run(config)` that returns a `TrajectoryView`.
 2. Add a nested config key on `SuiteConfig` (e.g. `codex: { ... }`) for harness-specific options.
@@ -600,7 +636,7 @@ import {
 } from "@alis-build/harness-eval";
 
 registerAdapter("my-harness", myAdapter);
-console.log(listAdapters()); // ["claude-code", "codex", "my-harness"]
+console.log(listAdapters()); // ["claude-code", "codex", "gemini-cli", …]
 ```
 
 Duplicate registration throws so accidental overrides fail fast during startup or tests.
@@ -694,6 +730,8 @@ The adapter maps Codex JSONL events into the shared `StreamEvent` shape and feed
 **Example suite:** [examples/codex-basic.yaml](examples/codex-basic.yaml)
 
 **Codex judge:** set `judge.adapter: codex` and nest options under `judge.codex` in grading YAML (see [docs/suite-config.md](docs/suite-config.md)).
+
+**Package export:** `@alis-build/harness-eval/adapters/codex`
 
 ---
 
@@ -801,7 +839,7 @@ Suite YAML  →  runSuite  →  Harness adapter  →  TrajectoryView
                           EvalRunEnvelope  →  DB / CI / API
 ```
 
-- **Pluggable harness adapters** — runner and assertions depend only on `TrajectoryView`.
+- **Pluggable harness adapters** — `claude-code`, `codex`, and `gemini-cli` today; runner and assertions depend only on `TrajectoryView`.
 - **Pluggable outcome layer** — built-in `grade`, custom `gradeFn`, or any external workflow.
 - **OTLP** — observability side export; not required for scoring.
 

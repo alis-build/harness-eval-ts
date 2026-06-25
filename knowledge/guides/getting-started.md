@@ -1,16 +1,21 @@
 ---
 type: Playbook
 title: Getting Started
-description: Write your first harness-eval suite and run a behavioral evaluation against a Claude Code harness.
-tags: [getting-started, quickstart, tutorial]
+description: Write your first harness-eval suite and run a behavioral evaluation against a harness adapter (Claude Code, Codex, or Gemini CLI).
+tags: [getting-started, quickstart, tutorial, claude-code, codex, gemini-cli]
 timestamp: 2026-06-24T00:00:00Z
 ---
 
 # Prerequisites
 
 - Node.js ≥22.12.0 (24 LTS recommended)
-- `claude` CLI installed and authenticated (`claude --version`)
-- `ANTHROPIC_API_KEY` set in your environment (or via `claude` auth)
+- A harness CLI installed and authenticated for the adapter you choose:
+  - **Claude Code:** `claude` CLI (`npm install -g @anthropic-ai/claude-code`); `ANTHROPIC_API_KEY` or `claude` auth
+  - **Codex:** `codex` CLI; OpenAI auth
+  - **Gemini CLI:** `gemini` CLI; Google auth
+- See [Harness adapters](/architecture/adapters.md) and per-adapter references for full requirements.
+
+This tutorial uses **Claude Code** (`adapter: claude-code`). Equivalent examples for Codex and Gemini CLI live in [`examples/codex-basic.yaml`](https://github.com/alis-build/harness-eval/tree/main/examples/codex-basic.yaml) and [`examples/gemini-cli-basic.yaml`](https://github.com/alis-build/harness-eval/tree/main/examples/gemini-cli-basic.yaml).
 
 # Install
 
@@ -24,7 +29,7 @@ After install, the `harness-eval` binary is available via `npx harness-eval` or 
 
 # Step 1 — Write a suite YAML
 
-Create `eval/suite.yaml` in your project root. This example tests that Claude reads a file when asked.
+Create `eval/suite.yaml` in your project root. This example tests that the harness reads a file when asked.
 
 **Recommended:** one unified `suite.yaml` with optional inline `judge:` and `pipeline:` blocks. See [`examples/pipeline/`](https://github.com/alis-build/harness-eval/tree/main/examples/pipeline) for the full layout.
 
@@ -233,7 +238,7 @@ Run and see pass rates per cell:
 
 **Wrong cwd:** The harness subprocess runs with `cwd` as its working directory. If you're testing `Read README.md` but `cwd` doesn't contain `README.md`, the tool call will fail. Use an absolute path or check that the relative path resolves correctly.
 
-**Tool not in allowedTools:** If a tool is called but not in `allowedTools`, Claude Code may prompt for permission — hanging the subprocess. Add the tool to `allowedTools` or check `permissionMode`.
+**Tool not in allowedTools (Claude Code):** If a tool is called but not in `allowedTools`, Claude Code may prompt for permission — hanging the subprocess. Add the tool to `allowedTools` or check `permissionMode`. Codex and Gemini CLI have their own permission/approval settings; see [Codex adapter](/reference/codex-adapter.md) and [Gemini CLI adapter](/reference/gemini-cli-adapter.md).
 
 # Citations
 
@@ -243,3 +248,5 @@ Run and see pass rates per cell:
 [4] [Suite YAML reference](/reference/suite-yaml.md)
 [5] [Assertion DSL reference](/reference/assertion-dsl.md)
 [6] [Claude Code adapter reference](/reference/claude-code-adapter.md)
+[7] [Codex adapter reference](/reference/codex-adapter.md)
+[8] [Gemini CLI adapter reference](/reference/gemini-cli-adapter.md)

@@ -8,7 +8,7 @@ timestamp: 2026-06-24T00:00:00Z
 
 # Recommended split
 
-harness-eval supports two CI patterns:
+harness-eval supports two CI patterns. Examples below use **Claude Code**; install and authenticate the CLI for whichever adapter your suite declares (`claude-code`, `codex`, or `gemini-cli`). See [Harness adapters](/architecture/adapters.md) for per-adapter requirements.
 
 **Pattern A — unified pipeline (single job, when suite defines `pipeline:`):**
 
@@ -37,6 +37,18 @@ PR opened / push
 ```
 
 Job 1 (or the run step in Pattern A) blocks the PR. Job 2 can run after the PR merges, or on a nightly schedule.
+
+# Harness CLI in CI
+
+Install the CLI for the adapter your suite uses:
+
+| Adapter | Install | Typical auth env |
+|---------|---------|------------------|
+| `claude-code` | `npm install -g @anthropic-ai/claude-code` | `ANTHROPIC_API_KEY` |
+| `codex` | Follow OpenAI Codex CLI install docs | OpenAI auth / API key |
+| `gemini-cli` | Follow Google Gemini CLI install docs | Google auth |
+
+The workflow examples below install Claude Code; swap the install step and secrets for your adapter.
 
 # GitHub Actions — Unified pipeline job
 
@@ -241,7 +253,7 @@ Use exit codes for CI gating:
 
 # Caching
 
-The `claude` binary and `node_modules` should be cached between runs. Use `actions/cache` with `pnpm` or `npm` lockfile keys for `node_modules`, and cache the installed `claude` binary location.
+Cache `node_modules` between runs (`actions/cache` with pnpm or npm lockfile keys). Also cache the harness CLI binary location for whichever adapter you use (`claude`, `codex`, or `gemini`).
 
 # Citations
 

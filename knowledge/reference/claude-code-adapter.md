@@ -8,7 +8,7 @@ timestamp: 2026-06-24T00:00:00Z
 
 # Overview
 
-The Claude Code adapter is the built-in harness adapter for `harness-eval`. It spawns `claude` CLI subprocesses with `--output-format stream-json`, parses the event stream, and produces [`TrajectoryView`](/concepts/trajectory-view.md) objects.
+The Claude Code adapter is a built-in harness adapter for `harness-eval`. It spawns `claude` CLI subprocesses with `--output-format stream-json`, parses the event stream, and produces [`TrajectoryView`](/concepts/trajectory-view.md) objects. See also [Codex](/reference/codex-adapter.md) and [Gemini CLI](/reference/gemini-cli-adapter.md) adapters.
 
 Configuration lives under the `claudeCode` key in any config block (`defaultConfig`, `case.config`, `cell.config`).
 

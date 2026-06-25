@@ -19,9 +19,9 @@ Stage 1: Load
 Stage 2: Run
   TestSuite ───── runSuite() ──── HarnessAdapter ──────────► SuiteReport
                    │ (case × cell × rep)      │
-                   │                    stream-json (Claude)
+                   │                    vendor stream (stdout)
                    │                          │
-                   │                   parseStreamJson()
+                   │                   adapter mapEvents()
                    │                          │
                    │                   TrajectoryBuilder
                    │                          │
@@ -37,7 +37,7 @@ Stage 4: Grade  [optional]
                    │ (per cell rep)        │
                    │            trajectoryToTranscript()
                    │                       │
-                   │              Claude / custom gradeFn
+                   │         built-in judge / custom gradeFn
 
 Stage 5: Envelope  [optional]
   SuiteReport ─── buildEvalRunEnvelope() ───────────────────► EvalRunEnvelope
@@ -71,12 +71,13 @@ This involves:
 **Per-repetition flow:**
 
 1. Resolve final config for the `(case, cell)` pair.
-2. Build CLI flags from config (`src/adapters/claude-code/flags.ts`).
-3. Spawn the harness subprocess (`src/adapters/claude-code/process.ts`): always passes `-p <prompt> --output-format stream-json --verbose`.
-4. Parse the `stream-json` output line-by-line with `parseStreamJson()` (`src/parsers/stream-json.ts`).
-5. Feed events into `TrajectoryBuilder` (`src/trajectory/builder.ts`) to accumulate a `TrajectoryView`.
-6. Evaluate all assertions against the `TrajectoryView` (`src/assertions/evaluator.ts`).
-7. Record the `RepetitionResult` (trajectory + assertion results + duration).
+2. Look up the harness adapter from the suite's `adapter` field (`claude-code`, `codex`, or `gemini-cli`).
+3. Build CLI flags from config (e.g. `src/adapters/claude-code/flags.ts`, `src/adapters/codex/flags.ts`, `src/adapters/gemini-cli/flags.ts`).
+4. Spawn the harness subprocess via the adapter's `process.ts`.
+5. Parse vendor output into normalized stream events (e.g. Claude/Gemini `stream-json`, Codex `exec --json`).
+6. Feed events into `TrajectoryBuilder` (`src/trajectory/builder.ts`) to accumulate a `TrajectoryView`.
+7. Evaluate all assertions against the `TrajectoryView` (`src/assertions/evaluator.ts`).
+8. Record the `RepetitionResult` (trajectory + assertion results + duration).
 
 **Assertion evaluation happens at run time.** Assertions are deterministic functions of the `TrajectoryView` — no network calls, no LLM. See [Assertion DSL](/reference/assertion-dsl.md).
 
@@ -96,9 +97,9 @@ The `--output <path>` flag writes the full `SuiteReport` JSON regardless of `--f
 
 `gradeReport(report, options)` runs an outcome judge for each `(case, cell, rep)` that has `expectations` defined.
 
-**Judge substrate:** By default, a Claude Code subprocess is spawned in single-turn mode (`--max-turns 1`, `--output-format json`, `bare: true`, `disableSlashCommands: true`, `noSessionPersistence: true`). The judge receives a structured prompt built from `trajectoryToTranscript()` and the case expectations.
+**Judge substrate:** By default, a built-in judge subprocess is spawned for the adapter configured in the suite's `judge:` block. Each adapter has judge-specific defaults (e.g. Claude Code: `--max-turns 1`, `bare: true`; Codex: `ephemeral`, `ignoreUserConfig`; Gemini CLI: `approvalMode: yolo`, `isolateConfig: true`). The judge receives a structured prompt built from `trajectoryToTranscript()` and the case expectations. See [Harness adapters](/architecture/adapters.md) and per-adapter references.
 
-**Custom judge:** Pass a `gradeFn` to replace the built-in Claude grader entirely. The function receives `{ prompt, transcript, expectations }` and returns `{ expectations: GradedExpectation[], summary }`.
+**Custom judge:** Pass a `gradeFn` to replace the built-in judge entirely. The function receives `{ prompt, transcript, expectations }` and returns `{ expectations: GradedExpectation[], summary }`.
 
 **Concurrency:** Default `maxConcurrent: 2` for grade (lower than run, since judge calls are more expensive).
 
@@ -129,7 +130,7 @@ CLI equivalent: `harness-eval pipeline <suite.yaml|dir> [--steps run,grade,envel
 
 | Layer | Type | Produced by | Used by |
 |-------|------|-------------|---------|
-| Vendor stream | `StreamEvent[]` | Claude subprocess stdout | `parseStreamJson` |
+| Vendor stream | `StreamEvent[]` | Harness subprocess stdout | Adapter `mapEvents` / parsers |
 | Harness session | `TrajectoryView` | `TrajectoryBuilder` | Assertions, judges |
 | Run report | `SuiteReport` | `runSuite` | Formatters, grader, envelope |
 | Grading report | `SuiteGradingReport` | `gradeReport` | Envelope, CI |
@@ -146,8 +147,8 @@ CLI equivalent: `harness-eval pipeline <suite.yaml|dir> [--steps run,grade,envel
 | `src/runner/suite.ts` | `runSuite()` — fan-out orchestrator |
 | `src/runner/case.ts` | Single repetition execution |
 | `src/runner/limit.ts` | Concurrency pool |
-| `src/adapters/claude-code/process.ts` | Spawn subprocess, collect stream |
-| `src/parsers/stream-json.ts` | Parse Claude `stream-json` events |
+| `src/adapters/*/process.ts` | Spawn subprocess, collect stream (per adapter) |
+| `src/adapters/*/map-events.ts` | Parse vendor output into stream events |
 | `src/trajectory/builder.ts` | Accumulate `TrajectoryView` |
 | `src/assertions/evaluator.ts` | Evaluate assertions against trajectory |
 | `src/reporter/` | Format and render `SuiteReport` |

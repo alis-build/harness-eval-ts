@@ -2,20 +2,20 @@
 type: Architecture
 title: Harness Adapter Pattern
 description: How pluggable harness adapters decouple evaluation logic from vendor-specific subprocess management and stream parsing.
-tags: [architecture, adapters, claude-code, codex, extensibility]
+tags: [architecture, adapters, claude-code, codex, gemini-cli, extensibility]
 timestamp: 2026-06-24T00:00:00Z
 ---
 
 # Purpose
 
-Different AI coding harnesses (Claude Code, Codex, Cursor, Gemini CLI) each have their own subprocess protocol, output format, and configuration API. If assertions and judges operated on raw vendor output, every new harness would require rewriting the entire evaluation layer.
+Different AI coding harnesses (Claude Code, Codex, Gemini CLI, and others) each have their own subprocess protocol, output format, and configuration API. If assertions and judges operated on raw vendor output, every new harness would require rewriting the entire evaluation layer.
 
 The adapter pattern solves this by inserting a translation layer between vendor output and the normalized [`TrajectoryView`](./concepts/trajectory-view.md):
 
 ```
 HarnessAdapter (vendor-specific)
   ├── spawns subprocess
-  ├── reads vendor output (e.g., Claude stream-json)
+  ├── reads vendor output (e.g., Claude/Gemini stream-json, Codex exec --json)
   ├── parses events into TrajectoryView
   └── returns AdapterResult
 

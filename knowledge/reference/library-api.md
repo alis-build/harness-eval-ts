@@ -177,7 +177,7 @@ import { gradeReport } from "@alis-build/harness-eval";
 const grading: SuiteGradingReport = await gradeReport(report, options);
 ```
 
-Runs the outcome judge for each `(case, cell, rep)` that has `expectations`. By default uses the built-in Claude grader.
+Runs the outcome judge for each `(case, cell, rep)` that has `expectations`. By default uses the built-in judge for the adapter configured in the suite's `judge:` block (Claude Code, Codex, or Gemini CLI).
 
 **Custom judge function:**
 

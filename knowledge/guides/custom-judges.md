@@ -1,14 +1,14 @@
 ---
 type: Playbook
 title: Custom Judges
-description: How to replace the built-in Claude grader with a custom judge function — using your own model, evaluation service, or scoring logic.
+description: How to replace the built-in judge with a custom judge function — using your own model, evaluation service, or scoring logic.
 tags: [grading, judges, customization, programmatic]
 timestamp: 2026-06-24T00:00:00Z
 ---
 
 # When to use a custom judge
 
-The built-in Claude grader works well for general-purpose outcome evaluation. Use a custom judge when you need to:
+The built-in judges (Claude Code, Codex, Gemini CLI) work well for general-purpose outcome evaluation. Use a custom judge when you need to:
 
 - Use a different model or provider (GPT-4, Gemini, a fine-tuned model)
 - Connect to an external evaluation service (LangSmith, Ragas, UpTrain)
@@ -227,7 +227,9 @@ gradeFn: async ({ view, prompt, expectations }) => {
 
 [1] `src/grader/types.ts` — GraderFn, GraderInput, GraderOutput interfaces
 [2] `src/grader/grade-report.ts` — gradeReport() implementation
-[3] `src/grader/claude-grader.ts` — built-in Claude grader
-[4] `src/grader/transcript.ts` — trajectoryToTranscript()
-[5] `src/grader/prompt.ts` — built-in judge prompt template
-[6] [Library API reference](/reference/library-api.md)
+[3] `src/grader/claude-grader.ts` — built-in Claude Code judge
+[4] `src/grader/codex-grader.ts` — built-in Codex judge
+[5] `src/grader/gemini-cli-grader.ts` — built-in Gemini CLI judge
+[6] `src/grader/transcript.ts` — trajectoryToTranscript()
+[7] `src/grader/prompt.ts` — built-in judge prompt template
+[8] [Library API reference](/reference/library-api.md)

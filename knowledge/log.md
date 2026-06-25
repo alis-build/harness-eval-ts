@@ -1,5 +1,12 @@
 # Knowledge Bundle Update Log
 
+## 2026-06-25 (multi-adapter docs)
+
+* **Update**: [overview](/knowledge/overview.md) — three built-in adapters (Claude Code, Codex, Gemini CLI); version 0.1.3.
+* **Update**: [getting started](/knowledge/guides/getting-started.md), [CI/CD](/knowledge/guides/ci-cd-integration.md), [custom judges](/knowledge/guides/custom-judges.md), [external eval platforms](/knowledge/guides/external-eval-platforms.md) — adapter-neutral framing; Claude tutorial retained with cross-links.
+* **Update**: [data flow](/knowledge/architecture/data-flow.md), [two-layer evaluation](/knowledge/architecture/two-layer-evaluation.md), [adapters](/knowledge/architecture/adapters.md) — vendor-neutral pipeline and judge descriptions.
+* **Update**: [suite YAML](/knowledge/reference/suite-yaml.md), [library API](/knowledge/reference/library-api.md), [Claude Code adapter](/knowledge/reference/claude-code-adapter.md), [trajectory-view](/knowledge/concepts/trajectory-view.md) — multi-adapter references.
+
 ## 2026-06-24 (unified suite config)
 
 * **Update**: [suite YAML reference](/knowledge/reference/suite-yaml.md) — inline `judge:` and `pipeline:` blocks, input resolution, auth notes.

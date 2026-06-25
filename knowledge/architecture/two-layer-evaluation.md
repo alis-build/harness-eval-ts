@@ -52,7 +52,7 @@ Each assertion has a [statistical threshold](/concepts/statistical-thresholds.md
 
 1. Calls `trajectoryToTranscript()` to convert the `TrajectoryView` into a readable text transcript.
 2. Builds a judge prompt from the transcript + `expectations` list.
-3. Spawns a Claude Code subprocess (or calls a custom `gradeFn`) to score each expectation.
+3. Spawns a built-in judge subprocess for the configured adapter (Claude Code, Codex, or Gemini CLI), or calls a custom `gradeFn`, to score each expectation.
 4. Returns structured `GradedExpectation[]` results.
 
 **What you can express:**
