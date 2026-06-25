@@ -22,7 +22,7 @@ function mockChild(pid = 42_424): {
   const child = new EventEmitter() as ChildProcess;
   child.stdout = stdout;
   child.stderr = stderr;
-  child.pid = pid;
+  Object.defineProperty(child, "pid", { value: pid });
   child.kill = vi.fn();
   return { child, stdout, stderr };
 }
@@ -112,9 +112,7 @@ describe("killTree", () => {
       throw new Error("ESRCH");
     });
 
-    const child = new EventEmitter() as ChildProcess;
-    child.pid = 12_345;
-    child.kill = vi.fn();
+    const { child } = mockChild(12_345);
 
     killTree(child, "SIGTERM");
 
