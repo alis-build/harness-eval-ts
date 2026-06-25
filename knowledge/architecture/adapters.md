@@ -49,12 +49,13 @@ Adapters are registered by ID:
 // src/adapters/registry.ts
 registerBuiltIn("claude-code", claudeCodeAdapter);
 registerBuiltIn("codex", codexAdapter);
+registerBuiltIn("gemini-cli", geminiCliAdapter);
 
 // Retrieval
 const adapter = getAdapter(suite.adapter ?? "claude-code");
 ```
 
-The `adapter` field in the suite YAML selects which adapter `runSuite` uses. Defaults to `"claude-code"`. Built-in ids: `claude-code`, `codex`.
+The `adapter` field in the suite YAML selects which adapter `runSuite` uses. Defaults to `"claude-code"`. Built-in ids: `claude-code`, `codex`, `gemini-cli`.
 
 # Claude Code adapter
 
@@ -104,6 +105,24 @@ Built-in adapter. Source: `src/adapters/codex/`.
 **Isolation:** `isolateConfig: false` (default) inherits `~/.codex`. `isolateConfig: true` uses a temp `$CODEX_HOME` per run.
 
 See [Codex CLI adapter reference](../reference/codex-adapter.md) for the complete field list.
+
+# Gemini CLI adapter
+
+Built-in adapter. Source: `src/adapters/gemini-cli/`.
+
+**Subprocess protocol:**
+
+1. Builds CLI flags from resolved config via `src/adapters/gemini-cli/flags.ts`.
+2. Always appends: `-p "<prompt>" --output-format stream-json --approval-mode yolo` (overridable).
+3. Spawns the `gemini` binary (configurable via `geminiCli.binary`).
+4. Reads stdout line-by-line; each line is a Gemini stream-json event.
+5. Maps events to `StreamEvent` via `GeminiCliEventMapper`.
+6. Passes mapped events to `TrajectoryBuilder`.
+7. On process exit (or timeout), finalizes the `TrajectoryView`.
+
+**Isolation:** `isolateConfig: false` (default) inherits caller Gemini CLI config. `isolateConfig: true` uses a temp config directory per run (`GEMINI_CONFIG_DIR`).
+
+See [Gemini CLI adapter reference](../reference/gemini-cli-adapter.md) for the complete field list.
 
 # TrajectoryBuilder
 

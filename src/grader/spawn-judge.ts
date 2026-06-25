@@ -1,8 +1,8 @@
 /**
- * Shared subprocess utilities for judge graders (Claude + Codex).
+ * Shared subprocess utilities for judge graders (Claude, Codex, Gemini CLI).
  *
  * Owns detached spawn, process-group teardown, and SIGTERM → SIGKILL
- * escalation so both graders share one implementation.
+ * escalation so all graders share one implementation.
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
@@ -70,24 +70,62 @@ export function spawnCollectStdout(options: SpawnJudgeOptions): Promise<string> 
       );
     }, timeoutMs);
 
-    const finalize = (err?: Error) => {
+    const finalize = (err?: Error, output?: string) => {
       clearTimeout(timer);
       if (killEscalation) clearTimeout(killEscalation);
       if (err) reject(err);
-      else resolve(chunks.join(""));
+      else resolve(output ?? chunks.join(""));
     };
 
     child.on("error", (err) => finalize(err));
     child.on("close", (code) => {
-      if (code !== 0 && chunks.length === 0) {
+      const stdout = chunks.join("");
+      const stderr = stderrChunks.join("");
+      if (stdout.length > 0) {
+        finalize(undefined, stdout);
+        return;
+      }
+
+      // Gemini CLI may emit --output-format json on stderr when stdout is empty
+      // (e.g. warnings prefix the payload). Recover trailing `{…}` before failing.
+      const stderrJson = extractJsonPayload(stderr);
+      if (stderrJson) {
+        finalize(undefined, stderrJson);
+        return;
+      }
+
+      if (code !== 0) {
         finalize(
           new Error(
-            `grader exited ${code}: ${stderrChunks.join("").slice(0, 500)}`,
+            `grader exited ${code}: ${stderr.slice(0, 500)}`,
           ),
         );
-      } else {
-        finalize();
+        return;
       }
+
+      finalize(undefined, stdout);
     });
   });
+}
+
+/**
+ * Return trailing JSON object from mixed stderr output.
+ *
+ * Gemini CLI judge runs sometimes print warnings before the JSON envelope;
+ * scan from the first `{` and validate with `JSON.parse`.
+ */
+function extractJsonPayload(text: string): string | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  const jsonStart = trimmed.indexOf("{");
+  if (jsonStart < 0) return null;
+
+  const candidate = trimmed.slice(jsonStart);
+  try {
+    JSON.parse(candidate);
+    return candidate;
+  } catch {
+    return null;
+  }
 }

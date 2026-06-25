@@ -14,6 +14,7 @@ import { ... } from "@alis-build/harness-eval/runner";         // runner interna
 import { ... } from "@alis-build/harness-eval/config";         // config loading
 import { ... } from "@alis-build/harness-eval/adapters/claude-code"; // Claude types
 import { ... } from "@alis-build/harness-eval/adapters/codex";      // Codex types
+import { ... } from "@alis-build/harness-eval/adapters/gemini-cli"; // Gemini CLI types
 ```
 
 ---

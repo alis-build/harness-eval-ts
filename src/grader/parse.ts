@@ -79,6 +79,33 @@ export function extractCodexResponseText(stdout: string): string {
   return trimmed;
 }
 
+/**
+ * Extract judge response text from Gemini CLI `--output-format json` stdout.
+ *
+ * Parses `{ response, stats, error? }` and returns the `response` field when
+ * present. When stdout is empty, {@link spawnCollectStdout} may already have
+ * recovered the JSON payload from stderr before this runs.
+ */
+export function extractGeminiCliResponseText(stdout: string): string {
+  const trimmed = stdout.trim();
+  if (!trimmed) return "";
+
+  try {
+    const data = JSON.parse(trimmed) as {
+      response?: string;
+      error?: { message?: string };
+    };
+    if (typeof data.response === "string" && data.response.length > 0) {
+      return data.response;
+    }
+    if (data.error?.message) return data.error.message;
+  } catch {
+    // fall through
+  }
+
+  return trimmed;
+}
+
 /** Walk a stream-json event array and return the final assistant or result text. */
 function extractFromEventArray(events: unknown[]): string | null {
   const result = events.find(

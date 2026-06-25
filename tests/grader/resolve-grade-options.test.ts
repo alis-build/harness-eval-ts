@@ -63,6 +63,37 @@ describe("resolveGradeOptions", () => {
     expect(resolved.codex?.ephemeral).toBe(true);
   });
 
+  it("resolves gemini-cli judge adapter", () => {
+    const resolved = resolveGradeOptions({
+      judge: {
+        adapter: "gemini-cli",
+        model: "gemini-2.5-flash",
+        env: { GOOGLE_CLOUD_PROJECT: "my-project" },
+        geminiCli: { approvalMode: "yolo", binary: "gemini" },
+      },
+    });
+
+    expect(resolved.judgeAdapter).toBe("gemini-cli");
+    expect(resolved.model).toBe("gemini-2.5-flash");
+    expect(resolved.binary).toBe("gemini");
+    expect(resolved.env).toEqual({ GOOGLE_CLOUD_PROJECT: "my-project" });
+    expect(resolved.geminiCli?.approvalMode).toBe("yolo");
+    expect(resolved.geminiCli?.binary).toBeUndefined();
+    expect(resolved.geminiCli?.model).toBeUndefined();
+  });
+
+  it("prefers geminiCli binary over claudeCode when adapter is gemini-cli", () => {
+    const resolved = resolveGradeOptions({
+      judge: {
+        adapter: "gemini-cli",
+        claudeCode: { binary: "claude" },
+        geminiCli: { binary: "gemini-bin" },
+      },
+    });
+
+    expect(resolved.binary).toBe("gemini-bin");
+  });
+
   it("prefers codex binary over claudeCode when adapter is codex", () => {
     const resolved = resolveGradeOptions({
       judge: {

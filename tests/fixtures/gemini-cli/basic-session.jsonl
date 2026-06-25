@@ -1,0 +1,4 @@
+{"type":"init","session_id":"gemini_basic_smoke","model":"gemini-2.5-pro","timestamp":"2026-06-25T10:00:00Z"}
+{"type":"message","role":"user","content":"What is harness-eval?","timestamp":"2026-06-25T10:00:01Z"}
+{"type":"message","role":"assistant","content":"harness-eval is a statistical eval framework for AI coding agent harnesses.","timestamp":"2026-06-25T10:00:05Z"}
+{"type":"result","status":"success","stats":{"input_tokens":80,"output_tokens":32,"duration_ms":900},"timestamp":"2026-06-25T10:00:06Z"}

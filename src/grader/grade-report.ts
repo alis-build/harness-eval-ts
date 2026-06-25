@@ -6,6 +6,10 @@ import { readFile } from "node:fs/promises";
 
 import { createClaudeGrader, type ClaudeGraderOptions } from "./claude-grader";
 import { createCodexGrader, type CodexGraderOptions } from "./codex-grader";
+import {
+  createGeminiCliGrader,
+  type GeminiCliGraderOptions,
+} from "./gemini-cli-grader";
 import { loadExpectationsMap } from "./expectations";
 import { trajectoryToTranscript } from "./transcript";
 import type {
@@ -32,7 +36,7 @@ export async function gradeReport(
     ? await loadExpectationsMap(options.expectationsPath)
     : {};
 
-  // Select grader subprocess by judge adapter id from grading YAML or CLI.
+  // Select grader by judge adapter: codex, gemini-cli, or default claude-code.
   const gradeFn: GraderFn =
     options.gradeFn ??
     (options.judgeAdapter === "codex"
@@ -44,7 +48,16 @@ export async function gradeReport(
           cwd: options.cwd,
           codex: options.codex as CodexGraderOptions["codex"],
         })
-      : createClaudeGrader({
+      : options.judgeAdapter === "gemini-cli"
+        ? createGeminiCliGrader({
+            binary: options.binary,
+            model: options.model,
+            timeoutMs: options.timeoutMs,
+            env: options.env,
+            cwd: options.cwd,
+            geminiCli: options.geminiCli as GeminiCliGraderOptions["geminiCli"],
+          })
+        : createClaudeGrader({
           binary: options.binary,
           model: options.model,
           timeoutMs: options.timeoutMs,

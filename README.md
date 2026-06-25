@@ -585,7 +585,7 @@ Define expected tool calls for Vertex trajectory metrics on the eval envelope. U
 
 ## Adding harness adapters
 
-Built-in adapters register at module load. **`claude-code`** and **`codex`** ship today; additional harnesses (Gemini CLI, Antigravity CLI) plug in via the same pattern:
+Built-in adapters register at module load. **`claude-code`**, **`codex`**, and **`gemini-cli`** ship today; additional harnesses (Antigravity CLI) plug in via the same pattern:
 
 1. Implement `HarnessAdapter` under `src/adapters/<id>/` with a `run(config)` that returns a `TrajectoryView`.
 2. Add a nested config key on `SuiteConfig` (e.g. `codex: { ... }`) for harness-specific options.
@@ -697,6 +697,41 @@ The adapter maps Codex JSONL events into the shared `StreamEvent` shape and feed
 
 ---
 
+## Gemini CLI adapter
+
+Nested under `geminiCli` in YAML (or flat in programmatic config). Maps to [Gemini CLI reference](https://geminicli.com/docs/cli/cli-reference/).
+
+The harness adapter invokes:
+
+```bash
+gemini -p "<prompt>" --output-format stream-json --approval-mode yolo [flags…]
+```
+
+| Field | CLI flag | Notes |
+| ----- | -------- | ----- |
+| `binary` | — | Default `gemini` |
+| `model` | `--model` | Also settable at top level |
+| `approvalMode` | `--approval-mode` | Default `yolo`; overridable: `default`, `auto_edit`, `plan` |
+| `sandbox` | `--sandbox` | Sandboxed execution |
+| `skipTrust` | `--skip-trust` | Default `true` for harness and judge — skips folder trust in headless runs |
+| `includeDirectories` | `--include-directories` | Extra workspace dirs (repeatable) |
+| `allowedMcpServerNames` | `--allowed-mcp-server-names` | MCP server allowlist |
+| `extensions` | `--extensions` | Extension allowlist |
+| `debug` | `--debug` | Verbose logging |
+| `isolateConfig` | — | `false` (default) = inherit caller config; `true` = temp config dir per run |
+
+MCP tool calls map to harness names `mcp__<server>__<tool>`; built-in Gemini tools keep native names (e.g. `Bash`, `read_file`).
+
+The adapter maps Gemini stream-json events into the shared `StreamEvent` shape and feeds `TrajectoryBuilder`. Fixture-driven tests use committed recordings under `tests/fixtures/gemini-cli/` — CI does not require `gemini` on `PATH`.
+
+**Example suite:** [examples/gemini-cli-basic.yaml](examples/gemini-cli-basic.yaml)
+
+**Gemini CLI judge:** set `judge.adapter: gemini-cli` and nest options under `judge.geminiCli` in grading YAML (see [docs/suite-config.md](docs/suite-config.md)). Example: [examples/gemini-grading.yaml](examples/gemini-grading.yaml).
+
+**Package export:** `@alis-build/harness-eval/adapters/gemini-cli`
+
+---
+
 ## Library API
 
 ```typescript
@@ -743,7 +778,7 @@ const envelope = buildEvalRunEnvelope(report, {
 });
 ```
 
-Subpath exports: `@alis-build/harness-eval/runner`, `@alis-build/harness-eval/config`, `@alis-build/harness-eval/adapters/claude-code`, `@alis-build/harness-eval/adapters/codex`.
+Subpath exports: `@alis-build/harness-eval/runner`, `@alis-build/harness-eval/config`, `@alis-build/harness-eval/adapters/claude-code`, `@alis-build/harness-eval/adapters/codex`, `@alis-build/harness-eval/adapters/gemini-cli`.
 
 ---
 

@@ -14,10 +14,11 @@ function withId(id: string, adapter = createMockAdapter()): HarnessAdapter {
 }
 
 describe("adapter registry", () => {
-  it("lists built-in claude-code and codex adapters", () => {
+  it("lists built-in claude-code, codex, and gemini-cli adapters", () => {
     const ids = listAdapters();
     expect(ids).toContain("claude-code");
     expect(ids).toContain("codex");
+    expect(ids).toContain("gemini-cli");
   });
 
   it("registers an adapter retrievable via getAdapter", () => {

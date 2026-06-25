@@ -107,6 +107,7 @@ List fields such as `allowedTools` and `pluginDirs` are **replaced**, not merged
 | `env` | Extra environment variables (`KEY: value` strings). |
 | `claudeCode` | Claude Code adapter options — see [README](../README.md#claude-code-adapter). |
 | `codex` | Codex CLI adapter options — see [README](../README.md#codex-cli-adapter). |
+| `geminiCli` | Gemini CLI adapter options — see [README](../README.md#gemini-cli-adapter). |
 
 ---
 
@@ -240,7 +241,7 @@ Outcome grading uses a **separate file** from the suite. Point `harness-eval gra
 
 ```yaml
 judge:
-  adapter: claude-code   # or codex
+  adapter: claude-code   # or codex, gemini-cli
   model: claude-sonnet-4-6
   timeoutMs: 300000
   maxConcurrent: 2
@@ -265,9 +266,19 @@ judge:
 
 See [examples/codex-grading.yaml](../examples/codex-grading.yaml).
 
+**Gemini CLI judge example:**
+
+```yaml
+judge:
+  adapter: gemini-cli
+  model: gemini-2.5-pro
+  geminiCli:
+    approvalMode: yolo
+```
+
 | Field | Description |
 |-------|-------------|
-| `judge.adapter` | Judge harness (default: `claude-code`). Supported: `claude-code`, `codex`. |
+| `judge.adapter` | Judge harness (default: `claude-code`). Supported: `claude-code`, `codex`, `gemini-cli`. |
 | `judge.model` | Model for the judge subprocess. |
 | `judge.timeoutMs` | Per-expectation batch timeout. |
 | `judge.maxConcurrent` | Parallel judge processes (default: **2** when unset). |
@@ -276,10 +287,13 @@ See [examples/codex-grading.yaml](../examples/codex-grading.yaml).
 | `judge.cwd` | Working directory for the judge. |
 | `judge.claudeCode` | Same options as suite `claudeCode` — see [README](../README.md#claude-code-adapter). |
 | `judge.codex` | Same options as suite `codex` — see [README](../README.md#codex-cli-adapter). |
+| `judge.geminiCli` | Same options as suite `geminiCli` — see [README](../README.md#gemini-cli-adapter). |
 
 **Built-in Claude judge defaults** (unless overridden under `judge.claudeCode`): `maxTurns: 1`, `bare: true`, `disableSlashCommands: true`, `noSessionPersistence: true`, `permissionMode: bypassPermissions`. These keep grading fast and isolated from plugins/MCP.
 
 **Built-in Codex judge defaults** (unless overridden under `judge.codex`): `ephemeral: true`, `ignoreUserConfig: true`, `skipGitRepoCheck: true`, `askForApproval: never`.
+
+**Built-in Gemini CLI judge defaults** (unless overridden under `judge.geminiCli`): `approvalMode: yolo`, `isolateConfig: true` (temp config dir per grade via `GEMINI_CONFIG_DIR`).
 
 **Expectations source:** copied from the suite into `report.json` at `run` time. Use `--expectations` on the CLI only when the report lacks them.
 

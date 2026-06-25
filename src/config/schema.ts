@@ -52,6 +52,22 @@ export const ClaudeCodeConfigSchema = z
   })
   .partial();
 
+/** Gemini CLI adapter-specific options (nested under `geminiCli` in suite YAML). */
+export const GeminiCliConfigSchema = z
+  .object({
+    binary: z.string(),
+    approvalMode: z.enum(["default", "auto_edit", "yolo", "plan"]),
+    sandbox: z.string(),
+    skipTrust: z.boolean(),
+    includeDirectories: z.array(z.string()),
+    allowedMcpServerNames: z.array(z.string()),
+    extensions: z.array(z.string()),
+    debug: z.boolean(),
+    /** Fresh temp `GEMINI_CONFIG_DIR` per run when true. */
+    isolateConfig: z.boolean(),
+  })
+  .partial();
+
 /** Codex CLI adapter-specific options (nested under `codex`). */
 export const CodexConfigSchema = z
   .object({
@@ -82,6 +98,7 @@ export const ConfigPartialSchema = z
     env: z.record(z.string(), z.string()),
     claudeCode: ClaudeCodeConfigSchema,
     codex: CodexConfigSchema,
+    geminiCli: GeminiCliConfigSchema,
   })
   .partial();
 

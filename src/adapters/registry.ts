@@ -17,14 +17,15 @@
  * 4. **Reference in suite YAML** with `adapter: <id>` and the nested config
  *    block; the runner calls `getAdapter(id).run(resolvedConfig)`.
  *
- * Built-in adapters are registered when this module loads. `claude-code` and
- * `codex` ship today; future harnesses (Gemini CLI, Antigravity CLI) follow
- * the same pattern in separate tracks.
+ * Built-in adapters are registered when this module loads: `claude-code`, `codex`,
+ * and `gemini-cli`. Future harnesses (e.g. Antigravity CLI) follow the same
+ * pattern in separate tracks.
  */
 
 import type { HarnessAdapter } from "./types";
 import { claudeCodeAdapter } from "./claude-code/index";
 import { codexAdapter } from "./codex/index";
+import { geminiCliAdapter } from "./gemini-cli/index";
 
 const ADAPTERS: Record<string, HarnessAdapter> = {};
 
@@ -34,6 +35,7 @@ function registerBuiltIn(id: string, adapter: HarnessAdapter): void {
 
 registerBuiltIn("claude-code", claudeCodeAdapter);
 registerBuiltIn("codex", codexAdapter);
+registerBuiltIn("gemini-cli", geminiCliAdapter);
 
 /**
  * Register a harness adapter by id.

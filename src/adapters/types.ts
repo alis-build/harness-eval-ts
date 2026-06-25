@@ -24,6 +24,8 @@ export type SuiteConfig = Partial<BaseAdapterConfig> & {
   claudeCode?: Record<string, unknown>;
   /** Codex CLI adapter options (when `adapter` is `codex`). */
   codex?: Record<string, unknown>;
+  /** Gemini CLI adapter options (when `adapter` is `gemini-cli`). */
+  geminiCli?: Record<string, unknown>;
 };
 
 /** Generic harness adapter interface. */
@@ -43,6 +45,11 @@ export interface AdapterResult {
 /** Process-level diagnostics from any adapter. */
 export interface AdapterDiagnostics {
   exitCode: number | null;
+  /**
+   * Human-readable label for a non-zero exit code when the adapter provides one
+   * (e.g. Gemini CLI spec P-7 codes via {@link describeGeminiCliExitCode}).
+   */
+  exitCodeDescription?: string;
   signal: NodeJS.Signals | null;
   stderr: string;
   parseErrors: ParseErrorRecord[];
