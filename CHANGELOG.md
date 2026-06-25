@@ -1,4 +1,12 @@
-## [0.1.2](https://github.com/alis-build/harness-eval-ts/compare/v0.1.3...v0.1.2) (2026-06-25)
+## [0.1.3](https://github.com/alis-build/harness-eval-ts/compare/v0.1.4...v0.1.3) (2026-06-25)
+
+## [0.1.4](https://github.com/alis-build/harness-eval-ts/compare/v0.1.3...v0.1.4) (2026-06-25)
+
+
+### Features
+
+* Add Gemini CLI adapter and enhance documentation ([e96d65c](https://github.com/alis-build/harness-eval-ts/commit/e96d65c6e402fd75bf15970ae09d9123c6a35404))
+* Enhance documentation for multi-adapter support and update guides ([0e29713](https://github.com/alis-build/harness-eval-ts/commit/0e29713dd1cb150e6c77d73db62b33f40246fc3b))
 
 ## [0.1.3](https://github.com/alis-build/harness-eval-ts/compare/v0.1.2...v0.1.3) (2026-06-25)
 
