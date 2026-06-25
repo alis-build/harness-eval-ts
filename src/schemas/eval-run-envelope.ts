@@ -292,6 +292,10 @@ export const adapterDiagnosticsSchema = described(
       z.number().nullable().optional(),
       "Child process exit code, or null if not available.",
     ),
+    exitCodeDescription: field(
+      z.string().optional(),
+      "Human-readable label for a non-zero harness exit code when the adapter provides one.",
+    ),
     signal: field(
       z.string().nullable().optional(),
       "Termination signal when the harness process was signaled.",

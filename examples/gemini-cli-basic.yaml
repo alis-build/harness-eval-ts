@@ -1,0 +1,38 @@
+# Minimal Gemini CLI smoke suite — MCP tool selection eval.
+#
+# Prereqs: `gemini` on PATH; Gemini CLI auth (GEMINI_API_KEY or logged-in CLI).
+#
+# Run:
+#   harness-eval run examples/gemini-cli-basic.yaml --output .debug/gemini-report.json
+#
+# Grade with Gemini CLI judge (optional — add judge block to grading YAML):
+#   harness-eval grade .debug/gemini-report.json \
+#     --config examples/grading.yaml \
+#     --output .debug/gemini-grading.json
+
+adapter: gemini-cli
+
+defaultConfig:
+  timeoutMs: 120000
+  geminiCli:
+    approvalMode: yolo
+    allowedMcpServerNames:
+      - my-mcp-server
+
+matrix:
+  - label: default
+    config: {}
+
+cases:
+  - id: read-readme-mcp
+    category: smoke
+    notes: Requires a configured MCP filesystem (or similar) server in Gemini CLI.
+    prompt: "Use the filesystem MCP tool to read README.md and summarize harness-eval in one sentence."
+    repetitions: 3
+    expectations:
+      - "The response describes an eval framework for AI coding agent harnesses"
+    assertions:
+      - called: "mcp__filesystem__read"
+        threshold: 0.8
+      - not:
+          responded_without_tool_calls: true

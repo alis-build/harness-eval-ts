@@ -31,6 +31,10 @@
             "types": "./dist/adapters/codex/index.d.ts",
             "import": "./dist/adapters/codex/index.js"
         },
+        "./adapters/gemini-cli": {
+            "types": "./dist/adapters/gemini-cli/index.d.ts",
+            "import": "./dist/adapters/gemini-cli/index.js"
+        },
         "./runner": {
             "types": "./dist/runner/suite.d.ts",
             "import": "./dist/runner/suite.js"
@@ -49,6 +53,7 @@
     "scripts": {
         "generate-schemas": "tsx src/schemas/generate.ts",
         "build": "pnpm run generate-schemas && tsdown",
+        "prebuild": "pnpm run typecheck",
         "postbuild": "node scripts/link-local-bin.mjs",
         "prepack": "pnpm run build",
         "prepublishOnly": "pnpm run build",

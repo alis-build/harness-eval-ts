@@ -1,0 +1,7 @@
+{"type":"init","session_id":"gemini_stream_smoke","model":"gemini-2.5-flash","timestamp":"2026-06-25T10:00:00Z"}
+{"type":"message","role":"user","content":"Please list my landing zones","timestamp":"2026-06-25T10:00:01Z"}
+{"type":"tool_use","tool_name":"mcp_alis-build_ListLandingZones","tool_id":"tool_1","parameters":{},"timestamp":"2026-06-25T10:00:02Z"}
+{"type":"tool_result","tool_id":"tool_1","status":"success","output":"{\"landing_zones\":[{\"id\":\"aibake\",\"status\":\"ACTIVE\"},{\"id\":\"vizx\",\"status\":\"DELETING\"}]}","timestamp":"2026-06-25T10:00:03Z"}
+{"type":"message","role":"assistant","content":"Here are your landing zones:\n\n| ID | Status |\n","delta":true,"timestamp":"2026-06-25T10:00:04Z"}
+{"type":"message","role":"assistant","content":"|---|---|\n| aibake | ACTIVE |\n| vizx | DELETING |","delta":true,"timestamp":"2026-06-25T10:00:05Z"}
+{"type":"result","status":"success","stats":{"input_tokens":100,"output_tokens":40,"duration_ms":5000},"timestamp":"2026-06-25T10:00:06Z"}

@@ -90,11 +90,13 @@ export interface GradeReportOptions {
   /** Working directory for the judge subprocess. */
   cwd?: string;
   /** Grading adapter id. Default: `claude-code`. */
-  judgeAdapter?: "claude-code" | "codex";
+  judgeAdapter?: "claude-code" | "codex" | "gemini-cli";
   /** Claude Code options for the judge (nested in grading YAML under `claudeCode`). */
   claudeCode?: Record<string, unknown>;
   /** Codex CLI options for the judge (nested in grading YAML under `codex`). */
   codex?: Record<string, unknown>;
+  /** Gemini CLI options for the judge (nested in grading YAML under `geminiCli`). */
+  geminiCli?: Record<string, unknown>;
   /** Path to grading YAML when `--config` was used. */
   gradingConfigPath?: string;
   /** Inject a custom grader (for tests). */

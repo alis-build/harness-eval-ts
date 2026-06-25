@@ -65,6 +65,28 @@ describe("Zod eval schemas", () => {
     expect(envelope.cells[0].repetitions[0].evaluationInstance).toBeDefined();
   });
 
+  it("preserves exitCodeDescription in adapter diagnostics through envelope parse", () => {
+    const report = makeReport();
+    report.cells[0]!.repetitions[0]!.adapterResult!.diagnostics = {
+      exitCode: 42,
+      exitCodeDescription: "Gemini CLI input error (code 42)",
+      signal: null,
+      stderr: "invalid prompt",
+      parseErrors: [],
+      timedOut: false,
+      durationMs: 100,
+    };
+
+    const envelope = buildEvalRunEnvelope(report, {
+      runId: "00000000-0000-4000-8000-000000000003",
+    });
+
+    const parsed = evalRunEnvelopeSchema.parse(envelope);
+    expect(
+      parsed.cells[0]?.repetitions[0]?.diagnostics?.exitCodeDescription,
+    ).toBe("Gemini CLI input error (code 42)");
+  });
+
   it("trajectory export schema matches embedded trajectories", () => {
     const envelope = buildEvalRunEnvelope(makeReport(), {
       runId: "00000000-0000-4000-8000-000000000002",

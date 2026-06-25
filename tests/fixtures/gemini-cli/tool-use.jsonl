@@ -1,0 +1,6 @@
+{"type":"init","session_id":"gemini_tool_smoke","model":"gemini-2.5-pro","timestamp":"2026-06-25T10:00:00Z"}
+{"type":"message","role":"user","content":"Read README.md","timestamp":"2026-06-25T10:00:01Z"}
+{"type":"tool_use","tool_name":"mcp__filesystem__read","tool_id":"tool_1","parameters":{"path":"README.md"},"timestamp":"2026-06-25T10:00:02Z"}
+{"type":"tool_result","tool_id":"tool_1","status":"success","output":"# harness-eval","timestamp":"2026-06-25T10:00:03Z"}
+{"type":"message","role":"assistant","content":"The README describes harness-eval.","timestamp":"2026-06-25T10:00:05Z"}
+{"type":"result","status":"success","stats":{"input_tokens":120,"output_tokens":45,"duration_ms":1500},"timestamp":"2026-06-25T10:00:06Z"}

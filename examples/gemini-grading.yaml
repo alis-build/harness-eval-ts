@@ -1,0 +1,26 @@
+# Grading config for Gemini CLI outcome judges (`harness-eval grade`).
+#
+# Field reference: docs/suite-config.md#grading-config-gradingyaml
+#
+# Use with any report that includes expectations (copied from the suite at run time).
+# Built-in judge defaults: approvalMode yolo, isolateConfig true (temp GEMINI_CONFIG_DIR).
+#
+# Example:
+#   harness-eval grade .debug/gemini-report.json \
+#     --config examples/gemini-grading.yaml \
+#     --output .debug/gemini-grading.json
+
+judge:
+  adapter: gemini-cli
+  model: gemini-2.5-flash
+  timeoutMs: 300000
+  maxConcurrent: 2
+  system_instruction: "You are a strict evaluator. Cite evidence from the transcript and final response."
+  env:
+    GOOGLE_CLOUD_PROJECT: my-gcp-project
+    GOOGLE_APPLICATION_CREDENTIALS: /path/to/service-account.json
+    GOOGLE_CLOUD_LOCATION: global
+  geminiCli:
+    approvalMode: yolo
+    skipTrust: true
+    isolateConfig: true

@@ -10,6 +10,7 @@ import { DEFAULT_ADAPTER_ID } from "../adapters/registry";
 import type { BaseAdapterConfig } from "../adapters/types";
 import type { ClaudeCodeAdapterConfig } from "../adapters/claude-code/types";
 import type { CodexAdapterConfig } from "../adapters/codex/types";
+import type { GeminiCliAdapterConfig } from "../adapters/gemini-cli/types";
 import type { SuiteConfig } from "../adapters/types";
 
 /** Merged config passed to {@link HarnessAdapter.run}. */
@@ -49,9 +50,26 @@ export function toCodexConfig(
   return merged as unknown as CodexAdapterConfig;
 }
 
+/** Merge generic suite config layers into a flat {@link GeminiCliAdapterConfig}. */
+export function toGeminiCliConfig(
+  layers: SuiteConfig[],
+  prompt: string,
+): GeminiCliAdapterConfig {
+  const merged: Record<string, unknown> = {};
+  for (const layer of layers) {
+    const { geminiCli, ...generic } = layer;
+    Object.assign(merged, generic);
+    if (geminiCli && typeof geminiCli === "object") {
+      Object.assign(merged, geminiCli);
+    }
+  }
+  merged.prompt = prompt;
+  return merged as unknown as GeminiCliAdapterConfig;
+}
+
 /**
  * Resolve merged suite layers into the flat config shape expected by the
- * selected harness adapter.
+ * selected harness adapter (`claude-code`, `codex`, or `gemini-cli`).
  */
 export function resolveRunConfig(
   adapterId: string,
@@ -64,6 +82,10 @@ export function resolveRunConfig(
 
   if (adapterId === "codex") {
     return toCodexConfig(layers, prompt) as ResolvedRunConfig;
+  }
+
+  if (adapterId === "gemini-cli") {
+    return toGeminiCliConfig(layers, prompt) as ResolvedRunConfig;
   }
 
   // Unknown adapters receive a shallow merge of all config layers.

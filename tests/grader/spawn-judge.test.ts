@@ -63,6 +63,29 @@ describe("spawnCollectStdout", () => {
     );
   });
 
+  it("collects JSON from stderr when stdout is empty (Gemini CLI)", async () => {
+    spawnMock.mockImplementation(() => {
+      const { child, stdout, stderr } = mockChild();
+      queueMicrotask(() => {
+        stderr.write(
+          'YOLO mode is enabled.\n{"response":"{\\"expectations\\":[]}"}\n',
+        );
+        stderr.end();
+        stdout.end();
+        child.emit("close", 41);
+      });
+      return child;
+    });
+
+    const output = await spawnCollectStdout({
+      binary: "gemini",
+      args: ["-p", "grade"],
+      timeoutMs: 5_000,
+    });
+
+    expect(output).toBe('{"response":"{\\"expectations\\":[]}"}');
+  });
+
   it("rejects on timeout and sends SIGTERM to the process group", async () => {
     vi.useFakeTimers();
     const pid = 99_001;

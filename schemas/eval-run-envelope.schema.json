@@ -652,34 +652,34 @@
           "$ref": "#/$defs/__schema123"
         },
         "assertionResults": {
-          "$ref": "#/$defs/__schema138"
+          "$ref": "#/$defs/__schema140"
         },
         "outcomeGrades": {
-          "$ref": "#/$defs/__schema147"
+          "$ref": "#/$defs/__schema149"
         },
         "externalScores": {
-          "$ref": "#/$defs/__schema171"
+          "$ref": "#/$defs/__schema173"
         },
         "artifacts": {
-          "$ref": "#/$defs/__schema181"
+          "$ref": "#/$defs/__schema183"
         },
         "evaluationInstance": {
-          "$ref": "#/$defs/__schema188"
+          "$ref": "#/$defs/__schema190"
         },
         "trajectoryInstances": {
-          "$ref": "#/$defs/__schema194"
+          "$ref": "#/$defs/__schema196"
         },
         "harnessMetrics": {
-          "$ref": "#/$defs/__schema204"
+          "$ref": "#/$defs/__schema206"
         },
         "latencySeconds": {
-          "$ref": "#/$defs/__schema211"
-        },
-        "failure": {
           "$ref": "#/$defs/__schema213"
         },
-        "error": {
+        "failure": {
           "$ref": "#/$defs/__schema215"
+        },
+        "error": {
+          "$ref": "#/$defs/__schema217"
         }
       },
       "required": [
@@ -1154,20 +1154,23 @@
         "exitCode": {
           "$ref": "#/$defs/__schema124"
         },
-        "signal": {
+        "exitCodeDescription": {
           "$ref": "#/$defs/__schema126"
         },
-        "stderr": {
+        "signal": {
           "$ref": "#/$defs/__schema128"
         },
-        "parseErrors": {
+        "stderr": {
           "$ref": "#/$defs/__schema130"
         },
+        "parseErrors": {
+          "$ref": "#/$defs/__schema132"
+        },
         "timedOut": {
-          "$ref": "#/$defs/__schema134"
+          "$ref": "#/$defs/__schema136"
         },
         "durationMs": {
-          "$ref": "#/$defs/__schema136"
+          "$ref": "#/$defs/__schema138"
         }
       },
       "additionalProperties": false,
@@ -1189,10 +1192,17 @@
       ]
     },
     "__schema126": {
-      "description": "Termination signal when the harness process was signaled.",
+      "description": "Human-readable label for a non-zero harness exit code when the adapter provides one.",
       "$ref": "#/$defs/__schema127"
     },
     "__schema127": {
+      "type": "string"
+    },
+    "__schema128": {
+      "description": "Termination signal when the harness process was signaled.",
+      "$ref": "#/$defs/__schema129"
+    },
+    "__schema129": {
       "anyOf": [
         {
           "type": "string"
@@ -1202,18 +1212,18 @@
         }
       ]
     },
-    "__schema128": {
-      "description": "Captured stderr from the harness process.",
-      "$ref": "#/$defs/__schema129"
-    },
-    "__schema129": {
-      "type": "string"
-    },
     "__schema130": {
-      "description": "Parse errors from adapter output handling.",
+      "description": "Captured stderr from the harness process.",
       "$ref": "#/$defs/__schema131"
     },
     "__schema131": {
+      "type": "string"
+    },
+    "__schema132": {
+      "description": "Parse errors from adapter output handling.",
+      "$ref": "#/$defs/__schema133"
+    },
+    "__schema133": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/ParseErrorRecord"
@@ -1223,10 +1233,10 @@
       "type": "object",
       "properties": {
         "line": {
-          "$ref": "#/$defs/__schema132"
+          "$ref": "#/$defs/__schema134"
         },
         "error": {
-          "$ref": "#/$defs/__schema133"
+          "$ref": "#/$defs/__schema135"
         }
       },
       "required": [
@@ -1237,55 +1247,55 @@
       "title": "ParseErrorRecord",
       "description": "One stream-json or adapter output parse failure."
     },
-    "__schema132": {
+    "__schema134": {
       "type": "string",
       "description": "Raw line from harness output that failed to parse."
     },
-    "__schema133": {
+    "__schema135": {
       "type": "string",
       "description": "Parse error message."
     },
-    "__schema134": {
-      "description": "Whether the harness run hit the configured timeout.",
-      "$ref": "#/$defs/__schema135"
-    },
-    "__schema135": {
-      "type": "boolean"
-    },
     "__schema136": {
-      "description": "Harness process duration in milliseconds.",
+      "description": "Whether the harness run hit the configured timeout.",
       "$ref": "#/$defs/__schema137"
     },
     "__schema137": {
-      "type": "number"
+      "type": "boolean"
     },
     "__schema138": {
+      "description": "Harness process duration in milliseconds.",
+      "$ref": "#/$defs/__schema139"
+    },
+    "__schema139": {
+      "type": "number"
+    },
+    "__schema140": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/__schema139"
+        "$ref": "#/$defs/__schema141"
       },
       "description": "Deterministic behavioral assertion results for this repetition."
     },
-    "__schema139": {
+    "__schema141": {
       "$ref": "#/$defs/AssertionResult"
     },
     "AssertionResult": {
       "type": "object",
       "properties": {
         "passed": {
-          "$ref": "#/$defs/__schema140"
-        },
-        "description": {
-          "$ref": "#/$defs/__schema141"
-        },
-        "details": {
           "$ref": "#/$defs/__schema142"
         },
-        "matches": {
+        "description": {
           "$ref": "#/$defs/__schema143"
         },
-        "children": {
+        "details": {
+          "$ref": "#/$defs/__schema144"
+        },
+        "matches": {
           "$ref": "#/$defs/__schema145"
+        },
+        "children": {
+          "$ref": "#/$defs/__schema147"
         }
       },
       "required": [
@@ -1297,39 +1307,39 @@
       "title": "AssertionResult",
       "description": "Result of evaluating one assertion, optionally with child nodes."
     },
-    "__schema140": {
+    "__schema142": {
       "type": "boolean",
       "description": "Whether this assertion node passed."
     },
-    "__schema141": {
+    "__schema143": {
       "type": "string",
       "description": "Short human-readable name, e.g. called(mcp__api__SearchSkills, >= 1)."
     },
-    "__schema142": {
+    "__schema144": {
       "type": "string",
       "description": "Diagnostic detail explaining pass or fail."
     },
-    "__schema143": {
-      "description": "Tool calls that satisfied (or could have satisfied) this assertion.",
-      "$ref": "#/$defs/__schema144"
-    },
-    "__schema144": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/ToolCall"
-      }
-    },
     "__schema145": {
-      "description": "Sub-results for compound assertions (and/or/not).",
+      "description": "Tool calls that satisfied (or could have satisfied) this assertion.",
       "$ref": "#/$defs/__schema146"
     },
     "__schema146": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/__schema139"
+        "$ref": "#/$defs/ToolCall"
       }
     },
     "__schema147": {
+      "description": "Sub-results for compound assertions (and/or/not).",
+      "$ref": "#/$defs/__schema148"
+    },
+    "__schema148": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema141"
+      }
+    },
+    "__schema149": {
       "description": "LLM or custom judge outcome grades when grading was run.",
       "$ref": "#/$defs/OutcomeGrades"
     },
@@ -1337,19 +1347,19 @@
       "type": "object",
       "properties": {
         "judge": {
-          "$ref": "#/$defs/__schema148"
+          "$ref": "#/$defs/__schema150"
         },
         "expectations": {
-          "$ref": "#/$defs/__schema154"
+          "$ref": "#/$defs/__schema156"
         },
         "summary": {
-          "$ref": "#/$defs/__schema158"
+          "$ref": "#/$defs/__schema160"
         },
         "evalFeedback": {
-          "$ref": "#/$defs/__schema163"
+          "$ref": "#/$defs/__schema165"
         },
         "error": {
-          "$ref": "#/$defs/__schema169"
+          "$ref": "#/$defs/__schema171"
         }
       },
       "required": [
@@ -1361,39 +1371,39 @@
       "title": "OutcomeGrades",
       "description": "Outcome grades for one repetition from the built-in or external LLM judge."
     },
-    "__schema148": {
+    "__schema150": {
       "description": "Judge that produced these grades.",
       "$ref": "#/$defs/JudgeInfo"
     },
-    "__schema149": {
+    "__schema151": {
       "type": "string",
       "description": "Stable judge identifier, e.g. harness-eval/claude-grader or langsmith/my-judge."
     },
-    "__schema150": {
-      "description": "Model used by the judge, when applicable.",
-      "$ref": "#/$defs/__schema151"
-    },
-    "__schema151": {
-      "type": "string"
-    },
     "__schema152": {
-      "description": "Judge or grader package version.",
+      "description": "Model used by the judge, when applicable.",
       "$ref": "#/$defs/__schema153"
     },
     "__schema153": {
+      "type": "string"
+    },
+    "__schema154": {
+      "description": "Judge or grader package version.",
+      "$ref": "#/$defs/__schema155"
+    },
+    "__schema155": {
       "type": "string"
     },
     "JudgeInfo": {
       "type": "object",
       "properties": {
         "id": {
-          "$ref": "#/$defs/__schema149"
+          "$ref": "#/$defs/__schema151"
         },
         "model": {
-          "$ref": "#/$defs/__schema150"
+          "$ref": "#/$defs/__schema152"
         },
         "version": {
-          "$ref": "#/$defs/__schema152"
+          "$ref": "#/$defs/__schema154"
         }
       },
       "required": [
@@ -1403,7 +1413,7 @@
       "title": "JudgeInfo",
       "description": "Identity of the judge that produced outcome grades."
     },
-    "__schema154": {
+    "__schema156": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/GradedExpectation"
@@ -1414,13 +1424,13 @@
       "type": "object",
       "properties": {
         "text": {
-          "$ref": "#/$defs/__schema155"
+          "$ref": "#/$defs/__schema157"
         },
         "passed": {
-          "$ref": "#/$defs/__schema156"
+          "$ref": "#/$defs/__schema158"
         },
         "evidence": {
-          "$ref": "#/$defs/__schema157"
+          "$ref": "#/$defs/__schema159"
         }
       },
       "required": [
@@ -1432,41 +1442,41 @@
       "title": "GradedExpectation",
       "description": "Outcome grade for one natural-language expectation."
     },
-    "__schema155": {
+    "__schema157": {
       "type": "string",
       "description": "Natural-language expectation that was graded."
     },
-    "__schema156": {
+    "__schema158": {
       "type": "boolean",
       "description": "Whether the judge deemed this expectation satisfied."
     },
-    "__schema157": {
+    "__schema159": {
       "type": "string",
       "description": "Judge explanation citing transcript or trajectory evidence."
     },
-    "__schema158": {
+    "__schema160": {
       "description": "Aggregate pass/fail counts.",
       "$ref": "#/$defs/GradingSummary"
-    },
-    "__schema159": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 9007199254740991,
-      "description": "Count of expectations that passed."
-    },
-    "__schema160": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 9007199254740991,
-      "description": "Count of expectations that failed."
     },
     "__schema161": {
       "type": "integer",
       "minimum": 0,
       "maximum": 9007199254740991,
-      "description": "Total expectations graded."
+      "description": "Count of expectations that passed."
     },
     "__schema162": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Count of expectations that failed."
+    },
+    "__schema163": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "Total expectations graded."
+    },
+    "__schema164": {
       "type": "number",
       "minimum": 0,
       "maximum": 1,
@@ -1476,16 +1486,16 @@
       "type": "object",
       "properties": {
         "passed": {
-          "$ref": "#/$defs/__schema159"
-        },
-        "failed": {
-          "$ref": "#/$defs/__schema160"
-        },
-        "total": {
           "$ref": "#/$defs/__schema161"
         },
-        "passRate": {
+        "failed": {
           "$ref": "#/$defs/__schema162"
+        },
+        "total": {
+          "$ref": "#/$defs/__schema163"
+        },
+        "passRate": {
+          "$ref": "#/$defs/__schema164"
         }
       },
       "required": [
@@ -1498,7 +1508,7 @@
       "title": "GradingSummary",
       "description": "Aggregate counts for a set of graded expectations."
     },
-    "__schema163": {
+    "__schema165": {
       "description": "Optional structured feedback for suite authors.",
       "$ref": "#/$defs/EvalFeedback"
     },
@@ -1506,10 +1516,10 @@
       "type": "object",
       "properties": {
         "suggestions": {
-          "$ref": "#/$defs/__schema164"
+          "$ref": "#/$defs/__schema166"
         },
         "overall": {
-          "$ref": "#/$defs/__schema168"
+          "$ref": "#/$defs/__schema170"
         }
       },
       "required": [
@@ -1520,7 +1530,7 @@
       "title": "EvalFeedback",
       "description": "Structured eval feedback from the outcome judge."
     },
-    "__schema164": {
+    "__schema166": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/EvalFeedbackSuggestion"
@@ -1531,10 +1541,10 @@
       "type": "object",
       "properties": {
         "assertion": {
-          "$ref": "#/$defs/__schema165"
+          "$ref": "#/$defs/__schema167"
         },
         "reason": {
-          "$ref": "#/$defs/__schema167"
+          "$ref": "#/$defs/__schema169"
         }
       },
       "required": [
@@ -1544,33 +1554,33 @@
       "title": "EvalFeedbackSuggestion",
       "description": "Actionable suggestion from eval feedback."
     },
-    "__schema165": {
+    "__schema167": {
       "description": "Related assertion or expectation text, when the suggestion targets one.",
-      "$ref": "#/$defs/__schema166"
+      "$ref": "#/$defs/__schema168"
     },
-    "__schema166": {
+    "__schema168": {
       "type": "string"
     },
-    "__schema167": {
+    "__schema169": {
       "type": "string",
       "description": "Why the judge suggests changing the suite or assertions."
     },
-    "__schema168": {
+    "__schema170": {
       "type": "string",
       "description": "Overall narrative feedback from the judge."
     },
-    "__schema169": {
-      "description": "Error message when grading failed for this repetition.",
-      "$ref": "#/$defs/__schema170"
-    },
-    "__schema170": {
-      "type": "string"
-    },
     "__schema171": {
-      "description": "Scores from external eval frameworks (LangSmith, Braintrust, etc.).",
+      "description": "Error message when grading failed for this repetition.",
       "$ref": "#/$defs/__schema172"
     },
     "__schema172": {
+      "type": "string"
+    },
+    "__schema173": {
+      "description": "Scores from external eval frameworks (LangSmith, Braintrust, etc.).",
+      "$ref": "#/$defs/__schema174"
+    },
+    "__schema174": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/ExternalScore"
@@ -1580,16 +1590,16 @@
       "type": "object",
       "properties": {
         "source": {
-          "$ref": "#/$defs/__schema173"
-        },
-        "metric": {
-          "$ref": "#/$defs/__schema174"
-        },
-        "value": {
           "$ref": "#/$defs/__schema175"
         },
+        "metric": {
+          "$ref": "#/$defs/__schema176"
+        },
+        "value": {
+          "$ref": "#/$defs/__schema177"
+        },
         "metadata": {
-          "$ref": "#/$defs/__schema179"
+          "$ref": "#/$defs/__schema181"
         }
       },
       "required": [
@@ -1601,49 +1611,49 @@
       "title": "ExternalScore",
       "description": "Score attached from an external eval platform without replacing OutcomeGrades."
     },
-    "__schema173": {
+    "__schema175": {
       "type": "string",
       "description": "External framework identifier, e.g. langsmith or braintrust."
     },
-    "__schema174": {
+    "__schema176": {
       "type": "string",
       "description": "Metric name within the external framework."
     },
-    "__schema175": {
+    "__schema177": {
       "anyOf": [
         {
-          "$ref": "#/$defs/__schema176"
-        },
-        {
-          "$ref": "#/$defs/__schema177"
-        },
-        {
           "$ref": "#/$defs/__schema178"
+        },
+        {
+          "$ref": "#/$defs/__schema179"
+        },
+        {
+          "$ref": "#/$defs/__schema180"
         }
       ],
       "description": "Metric value (numeric score, boolean pass, or categorical label)."
     },
-    "__schema176": {
+    "__schema178": {
       "type": "number"
     },
-    "__schema177": {
+    "__schema179": {
       "type": "boolean"
     },
-    "__schema178": {
+    "__schema180": {
       "type": "string"
     },
-    "__schema179": {
+    "__schema181": {
       "description": "Framework-specific metadata (run ids, trace urls, etc.).",
-      "$ref": "#/$defs/__schema180"
+      "$ref": "#/$defs/__schema182"
     },
-    "__schema180": {
+    "__schema182": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
     },
-    "__schema181": {
+    "__schema183": {
       "description": "Optional transcript, raw stream, or OTLP URI artifacts.",
       "$ref": "#/$defs/EvalArtifacts"
     },
@@ -1651,42 +1661,42 @@
       "type": "object",
       "properties": {
         "rawStreamEvents": {
-          "$ref": "#/$defs/__schema182"
-        },
-        "otlpTraceUri": {
           "$ref": "#/$defs/__schema184"
         },
-        "transcript": {
+        "otlpTraceUri": {
           "$ref": "#/$defs/__schema186"
+        },
+        "transcript": {
+          "$ref": "#/$defs/__schema188"
         }
       },
       "additionalProperties": false,
       "title": "EvalArtifacts",
       "description": "Optional large or vendor-specific blobs. Store by reference in DB when possible."
     },
-    "__schema182": {
-      "description": "Claude Code stream-json lines — debug only, not cross-harness. Prefer transcript for judges.",
-      "$ref": "#/$defs/__schema183"
-    },
-    "__schema183": {
-      "type": "array",
-      "items": {}
-    },
     "__schema184": {
-      "description": "URI to an OTLP trace blob (S3, GCS, etc.) when exported separately.",
+      "description": "Claude Code stream-json lines — debug only, not cross-harness. Prefer transcript for judges.",
       "$ref": "#/$defs/__schema185"
     },
     "__schema185": {
-      "type": "string"
+      "type": "array",
+      "items": {}
     },
     "__schema186": {
-      "description": "Text transcript for judges (trajectoryToTranscript output).",
+      "description": "URI to an OTLP trace blob (S3, GCS, etc.) when exported separately.",
       "$ref": "#/$defs/__schema187"
     },
     "__schema187": {
       "type": "string"
     },
     "__schema188": {
+      "description": "Text transcript for judges (trajectoryToTranscript output).",
+      "$ref": "#/$defs/__schema189"
+    },
+    "__schema189": {
+      "type": "string"
+    },
+    "__schema190": {
       "description": "Vertex EvaluationInstance protojson wire object.",
       "$ref": "#/$defs/EvaluationInstanceJson"
     },
@@ -1694,20 +1704,20 @@
       "type": "object",
       "properties": {
         "prompt": {
-          "$ref": "#/$defs/__schema189"
+          "$ref": "#/$defs/__schema191"
         },
         "response": {
-          "$ref": "#/$defs/__schema192"
+          "$ref": "#/$defs/__schema194"
         },
         "reference": {
-          "$ref": "#/$defs/__schema193"
+          "$ref": "#/$defs/__schema195"
         }
       },
       "additionalProperties": false,
       "title": "EvaluationInstanceJson",
       "description": "Vertex EvaluationInstance wire format (agentEvalData omitted in v1)."
     },
-    "__schema189": {
+    "__schema191": {
       "description": "Eval prompt.",
       "$ref": "#/$defs/InstanceData"
     },
@@ -1715,29 +1725,29 @@
       "type": "object",
       "properties": {
         "text": {
-          "$ref": "#/$defs/__schema190"
+          "$ref": "#/$defs/__schema192"
         }
       },
       "additionalProperties": false,
       "title": "InstanceData",
       "description": "EvaluationInstance prompt/response/reference text wrapper."
     },
-    "__schema190": {
+    "__schema192": {
       "description": "Plain text instance data.",
-      "$ref": "#/$defs/__schema191"
+      "$ref": "#/$defs/__schema193"
     },
-    "__schema191": {
+    "__schema193": {
       "type": "string"
     },
-    "__schema192": {
+    "__schema194": {
       "description": "Final agent response.",
       "$ref": "#/$defs/InstanceData"
     },
-    "__schema193": {
+    "__schema195": {
       "description": "Reference answer text.",
       "$ref": "#/$defs/InstanceData"
     },
-    "__schema194": {
+    "__schema196": {
       "description": "Vertex Trajectory*Instance protojson wire objects keyed by metric.",
       "$ref": "#/$defs/TrajectoryInstancesJson"
     },
@@ -1745,29 +1755,29 @@
       "type": "object",
       "properties": {
         "exactMatch": {
-          "$ref": "#/$defs/__schema195"
+          "$ref": "#/$defs/__schema197"
         },
         "inOrderMatch": {
-          "$ref": "#/$defs/__schema198"
-        },
-        "anyOrderMatch": {
-          "$ref": "#/$defs/__schema199"
-        },
-        "precision": {
           "$ref": "#/$defs/__schema200"
         },
-        "recall": {
+        "anyOrderMatch": {
           "$ref": "#/$defs/__schema201"
         },
-        "singleToolUse": {
+        "precision": {
           "$ref": "#/$defs/__schema202"
+        },
+        "recall": {
+          "$ref": "#/$defs/__schema203"
+        },
+        "singleToolUse": {
+          "$ref": "#/$defs/__schema204"
         }
       },
       "additionalProperties": false,
       "title": "TrajectoryInstancesJson",
       "description": "Vertex Trajectory*Instance messages keyed by metric."
     },
-    "__schema195": {
+    "__schema197": {
       "description": "Exact match instance.",
       "$ref": "#/$defs/TrajectoryPairInstanceJson"
     },
@@ -1775,10 +1785,10 @@
       "type": "object",
       "properties": {
         "predictedTrajectory": {
-          "$ref": "#/$defs/__schema196"
+          "$ref": "#/$defs/__schema198"
         },
         "referenceTrajectory": {
-          "$ref": "#/$defs/__schema197"
+          "$ref": "#/$defs/__schema199"
         }
       },
       "required": [
@@ -1789,31 +1799,31 @@
       "title": "TrajectoryPairInstanceJson",
       "description": "Shared shape for Trajectory*Match/Precision/Recall instances."
     },
-    "__schema196": {
+    "__schema198": {
       "description": "Predicted tool-call trajectory.",
       "$ref": "#/$defs/ProtojsonTrajectory"
     },
-    "__schema197": {
+    "__schema199": {
       "description": "Reference tool-call trajectory.",
       "$ref": "#/$defs/ProtojsonTrajectory"
     },
-    "__schema198": {
+    "__schema200": {
       "description": "In-order match instance.",
       "$ref": "#/$defs/TrajectoryPairInstanceJson"
     },
-    "__schema199": {
+    "__schema201": {
       "description": "Any-order match instance.",
       "$ref": "#/$defs/TrajectoryPairInstanceJson"
     },
-    "__schema200": {
+    "__schema202": {
       "description": "Precision instance.",
       "$ref": "#/$defs/TrajectoryPairInstanceJson"
     },
-    "__schema201": {
+    "__schema203": {
       "description": "Recall instance.",
       "$ref": "#/$defs/TrajectoryPairInstanceJson"
     },
-    "__schema202": {
+    "__schema204": {
       "description": "Single tool use instance.",
       "$ref": "#/$defs/TrajectorySingleToolUseInstanceJson"
     },
@@ -1821,7 +1831,7 @@
       "type": "object",
       "properties": {
         "predictedTrajectory": {
-          "$ref": "#/$defs/__schema203"
+          "$ref": "#/$defs/__schema205"
         }
       },
       "required": [
@@ -1831,33 +1841,33 @@
       "title": "TrajectorySingleToolUseInstanceJson",
       "description": "Vertex TrajectorySingleToolUseInstance wire format."
     },
-    "__schema203": {
+    "__schema205": {
       "description": "Predicted tool-call trajectory.",
       "$ref": "#/$defs/ProtojsonTrajectory"
     },
-    "__schema204": {
+    "__schema206": {
       "$ref": "#/$defs/HarnessMetrics"
     },
     "HarnessMetrics": {
       "type": "object",
       "properties": {
         "trajectoryExactMatch": {
-          "$ref": "#/$defs/__schema205"
-        },
-        "trajectoryInOrderMatch": {
-          "$ref": "#/$defs/__schema206"
-        },
-        "trajectoryAnyOrderMatch": {
           "$ref": "#/$defs/__schema207"
         },
-        "trajectoryPrecision": {
+        "trajectoryInOrderMatch": {
           "$ref": "#/$defs/__schema208"
         },
-        "trajectoryRecall": {
+        "trajectoryAnyOrderMatch": {
           "$ref": "#/$defs/__schema209"
         },
-        "trajectorySingleToolUse": {
+        "trajectoryPrecision": {
           "$ref": "#/$defs/__schema210"
+        },
+        "trajectoryRecall": {
+          "$ref": "#/$defs/__schema211"
+        },
+        "trajectorySingleToolUse": {
+          "$ref": "#/$defs/__schema212"
         }
       },
       "required": [
@@ -1872,42 +1882,42 @@
       "title": "HarnessMetrics",
       "description": "Harness-precomputed trajectory metric scores."
     },
-    "__schema205": {
+    "__schema207": {
       "type": "number",
       "description": "Exact trajectory match score (0 or 1)."
     },
-    "__schema206": {
+    "__schema208": {
       "type": "number",
       "description": "In-order trajectory match score (0 or 1)."
     },
-    "__schema207": {
+    "__schema209": {
       "type": "number",
       "description": "Any-order trajectory match score (0 or 1)."
     },
-    "__schema208": {
+    "__schema210": {
       "type": "number",
       "description": "Trajectory precision (0..1)."
     },
-    "__schema209": {
+    "__schema211": {
       "type": "number",
       "description": "Trajectory recall (0..1)."
     },
-    "__schema210": {
+    "__schema212": {
       "type": "number",
       "description": "Single-tool-use match score (0 or 1)."
     },
-    "__schema211": {
-      "description": "Session latency in seconds.",
-      "$ref": "#/$defs/__schema212"
-    },
-    "__schema212": {
-      "type": "number"
-    },
     "__schema213": {
-      "description": "1 when the harness run failed, 0 on success.",
+      "description": "Session latency in seconds.",
       "$ref": "#/$defs/__schema214"
     },
     "__schema214": {
+      "type": "number"
+    },
+    "__schema215": {
+      "description": "1 when the harness run failed, 0 on success.",
+      "$ref": "#/$defs/__schema216"
+    },
+    "__schema216": {
       "anyOf": [
         {
           "type": "number",
@@ -1919,7 +1929,7 @@
         }
       ]
     },
-    "__schema215": {
+    "__schema217": {
       "description": "Present when the harness failed without producing a trajectory.",
       "$ref": "#/$defs/RepetitionError"
     },
@@ -1927,10 +1937,10 @@
       "type": "object",
       "properties": {
         "message": {
-          "$ref": "#/$defs/__schema216"
+          "$ref": "#/$defs/__schema218"
         },
         "diagnostics": {
-          "$ref": "#/$defs/__schema217"
+          "$ref": "#/$defs/__schema219"
         }
       },
       "required": [
@@ -1940,11 +1950,11 @@
       "title": "RepetitionError",
       "description": "Harness failure for one repetition without a usable TrajectoryView."
     },
-    "__schema216": {
+    "__schema218": {
       "type": "string",
       "description": "Harness failure message for this repetition."
     },
-    "__schema217": {
+    "__schema219": {
       "description": "Adapter diagnostics when the harness failed before producing a trajectory.",
       "$ref": "#/$defs/AdapterDiagnostics"
     }
