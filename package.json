@@ -1,6 +1,6 @@
 {
     "name": "@alis-build/harness-eval",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "Harness-level eval framework for measuring AI coding agent tool-selection behavior",
     "type": "module",
     "main": "./dist/index.js",
